@@ -438,10 +438,10 @@ public:
       g_UserGenerator.GetSkeletonCap().GetSkeletonJointOrientation(user, joint, joint_orientation);
 
       XnFloat* m = joint_orientation.orientation.elements;
-      btMatrix3x3 mat (m[0], m[1], m[2],
+      tf::Matrix3x3 mat (m[0], m[1], m[2],
                        m[3], m[4], m[5],
                        m[6], m[7], m[8]);
-      btQuaternion q;
+      tf::Quaternion q;
       mat.getRotation (q);
       q.setY(-q.y());
       q.setZ(-q.z());
