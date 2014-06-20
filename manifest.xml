@@ -18,7 +18,6 @@
   <depend package="cv_bridge" />
   <depend package="nodelet" />
   <depend package="image_transport" />
-
   <rosdep name="libglew1.6"/>
   <rosdep name="libglew1.6-dev"/>
 

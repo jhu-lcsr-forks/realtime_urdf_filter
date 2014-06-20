@@ -1,10 +1,10 @@
-<launch>
+	<launch>
   <arg name="nodelet" default="false"/>
 
   <!-- Launch nodelet -->
-  <node if="$(arg nodelet)" pkg="nodelet" type="nodelet" name="realtime_urtf_filter_nodelet" args="load realtime_urdf_filter/RealtimeURDFFilterNodelet camera_nodelet_manager" output="screen">
-    <remap from="~input_depth" to="/camera/depth_registered/image_rect"/>
-    <remap from="~output_depth" to="/camera/depth_registered_filtered/image_rect" />
+  <node if="$(arg nodelet)" pkg="nodelet" type="nodelet" name="realtime_urdf_filter_nodelet" args="load realtime_urdf_filter/RealtimeURDFFilterNodelet camera_nodelet_manager" output="screen">
+    <remap from="~input_depth" to="/kinect_head/depth_registered/image"/>
+    <remap from="~output_depth" to="/kinect_head/depth_registered_filtered/image" />
     <remap from="~output_mask" to="/urdf_filtered_mask" />
 
     <rosparam command="load" file="$(find realtime_urdf_filter)/launch/filter_parameters.yaml"/>
@@ -12,18 +12,31 @@
 
   <node unless="$(arg nodelet)" 
     pkg="realtime_urdf_filter" type="realtime_urdf_filter" name="$(anon realtime_urdf_filter)" output="screen">
-    <remap from="~input_depth" to="/camera/depth_registered/image_rect"/>
-    <remap from="~output_depth" to="/camera/depth_registered_filtered/image_rect" />
+    <remap from="~input_depth" to="/kinect_head/depth_registered/image"/>
+    <remap from="~output_depth" to="/kinect_head/depth_registered_filtered/image" />
     <remap from="~output_mask" to="/urdf_filtered_mask" />
 
     <rosparam command="load" file="$(find realtime_urdf_filter)/launch/filter_parameters.yaml"/>
   </node>                 
 
   <!-- Load an example URDF -->
-  <param name="robot_description" command="$(find xacro)/xacro.py '$(find realtime_urdf_filter)/urdf/example.urdf.xml'"/>
+  <!--param name="kitchen_description" command="$(find xacro)/xacro.py '$(find iai_maps)/room/kitchen_area.urdf.xml'"/-->
 
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher">
-    <param name="tf_prefix" value="EXAMPLE"/>
-  </node>
+  <!--node pkg="robot_state_chain_publisher" type="state_chain_publisher"
+    name="kitchen_state_publisher" output="screen">
+    <param name="tf_prefix" value="/iai_kitchen"/>
+    <param name="publish_frequency" value="2"/>
+    <remap from="robot_description" to="kitchen_description" />
+  </node-->
+
+  <!--param name="room_description" command="$(find xacro)/xacro.py '$(find iai_maps)/room/room.urdf.xml'"/-->
+
+  <!--node pkg="robot_state_chain_publisher" type="state_chain_publisher"
+    name="room_state_publisher" output="screen">
+    <param name="tf_prefix" value="/iai_lab"/>
+    <param name="publish_frequency" value="2"/>
+    <remap from="robot_description" to="room_description" />
+  </node-->
+
 </launch>
 
