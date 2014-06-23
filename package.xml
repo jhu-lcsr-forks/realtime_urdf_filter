@@ -1,0 +1,40 @@
+<package>
+  <name>realtime_urdf_filter</name> 
+  <description>realtime_urdf_filter</description>
+  <author>Nico Blodow</author>
+  <author>Ferenc Balint-Benczedi(catkiniziation and ROS compatibility)</author>
+  <license>BSD</license>
+  <maintainer email="xxx@xxx.xxx">Nico Blodow</maintainer>
+  <url>http://ros.org/wiki/realtime_urdf_filter</url>
+  <version>0.0.1</version>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>urdf</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>resource_retreiver</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>nodelet</build_depend> 
+  <build_depend>image_transport</build_depend> 
+  
+  <run_depend>urdf</run_depend> 
+  <run_depend>tf</run_depend> 
+  <run_depend>resource_retreiver</run_depend> 
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>nodele</run_depend>
+  <run_depend>image_transport</run_depend>
+  
+  
+  <!--rosdep name="libglew1.6"/>
+  <rosdep name="libglew1.6-dev"/-->
+
+  <export>
+    <!--cpp cflags="-I${prefix}/include" />
+    <nodelet plugin="${prefix}/plugins/nodelet_plugins.xml" /-->
+  </export>
+
+</package>
+
+
