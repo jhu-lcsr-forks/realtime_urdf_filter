@@ -33,11 +33,21 @@
 #include <GL/freeglut.h>
 #include <realtime_urdf_filter/renderable.h>
 #include <resource_retriever/retriever.h>
+
+#ifdef ASSIMP3
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/IOStream.hpp>
+#include <assimp/IOSystem.hpp>
+#else
 #include <assimp/assimp.hpp>
 #include <assimp/aiScene.h>
 #include <assimp/aiPostProcess.h>
 #include <assimp/IOStream.h>
 #include <assimp/IOSystem.h>
+#endif
+
 #include <ros/assert.h>
 
 namespace realtime_urdf_filter
