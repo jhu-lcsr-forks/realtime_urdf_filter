@@ -26,9 +26,6 @@ find_package(OpenCV REQUIRED)
 find_package(OpenGL)
 find_library(freeglut_LIBRARY glut /usr/lib)
 
-
-
-
 find_path( freeglut_INCLUDE_DIR GL/freeglut.h
   /usr/include/GL
   /usr/openwin/share/include
@@ -46,6 +43,12 @@ catkin_package(
     INCLUDE_DIRS include
     )
 
+execute_process(COMMAND find ${PROJECT_SOURCE_DIR} -name "*.h*" -or -name "*.cpp*" -or -name "*.launch" -or -name "*.yaml" -or -name "*.xml" -or -name "*.frag" -or -name "*.vert" OUTPUT_VARIABLE FILES_STRING)
+string(REPLACE "\n" ";" FILES_LIST ${FILES_STRING})
+add_custom_target(additional_files_${PROJECT_NAME}
+  SOURCES
+  ${FILES_LIST}
+)
 
 add_library (FBO src/FrameBufferObject.cpp)
 target_link_libraries (FBO GLEW)
