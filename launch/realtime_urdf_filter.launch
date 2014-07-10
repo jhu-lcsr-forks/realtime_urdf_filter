@@ -3,8 +3,9 @@
 
   <!-- Launch nodelet -->
   <node if="$(arg nodelet)" pkg="nodelet" type="nodelet" name="realtime_urdf_filter_nodelet" args="load realtime_urdf_filter/RealtimeURDFFilterNodelet camera_nodelet_manager" output="screen">
-    <remap from="~input_depth" to="/kinect_head/depth_registered/image"/>
+    <remap from="~input_depth" to="/kinect_head/depth_registered/image_raw"/>
     <remap from="~output_depth" to="/kinect_head/depth_registered_filtered/image" />
+    <remap from="~output_depth_raw" to="/kinect_head/depth_registered_filtered/image_raw" />
     <remap from="~output_mask" to="/kinect_head/depth_registered_filtered/mask" />
 
     <rosparam command="load" file="$(find realtime_urdf_filter)/launch/filter_parameters.yaml"/>
@@ -12,8 +13,9 @@
 
   <node unless="$(arg nodelet)" 
     pkg="realtime_urdf_filter" type="realtime_urdf_filter" name="$(anon realtime_urdf_filter)" output="screen">
-    <remap from="~input_depth" to="/kinect_head/depth_registered/image"/>
+    <remap from="~input_depth" to="/kinect_head/depth_registered/image_raw"/>
     <remap from="~output_depth" to="/kinect_head/depth_registered_filtered/image" />
+    <remap from="~output_depth_raw" to="/kinect_head/depth_registered_filtered/image_raw" />
     <remap from="~output_mask" to="/kinect_head/depth_registered_filtered/mask" />
 
     <rosparam command="load" file="$(find realtime_urdf_filter)/launch/filter_parameters.yaml"/>

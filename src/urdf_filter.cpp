@@ -113,6 +113,11 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   depth_pub_ = image_transport_.advertiseCamera("output_depth", 10);
   depth_pub_raw_ = image_transport_.advertiseCamera("output_depth_raw", 10);
   mask_pub_ = image_transport_.advertiseCamera("output_mask", 10);
+
+  nh_.setParam(depth_pub_.getTopic() + "/compressedDepth/png_level", 0);
+  nh_.setParam(depth_pub_raw_.getTopic() + "/compressedDepth/png_level", 0);
+  nh_.setParam(mask_pub_.getTopic() + "/compressed/png_level", 0);
+  nh_.setParam(mask_pub_.getTopic() + "/compressed/format", "png");
 }
 
 RealtimeURDFFilter::~RealtimeURDFFilter ()
@@ -235,7 +240,8 @@ void RealtimeURDFFilter::filter (
       << " (min: "<< min
       << ", max: " << max 
       << ", avg: " << sum / timings.size()
-      << " ms)" << std::endl;
+      << " ms, " << 1000.0 / (sum / timings.size())
+      << " Hz)" << std::endl;
     count = 0;
     last = now;
     timings.clear();
@@ -252,15 +258,24 @@ void RealtimeURDFFilter::filter_callback
 
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
+  cv::Mat1f depth_image;
   try {
-    orig_depth_img = cv_bridge::toCvShare (ros_depth_image, sensor_msgs::image_encodings::TYPE_32FC1);
+    if(ros_depth_image->encoding == sensor_msgs::image_encodings::TYPE_32FC1)
+    {
+      orig_depth_img = cv_bridge::toCvShare (ros_depth_image, sensor_msgs::image_encodings::TYPE_32FC1);
+      depth_image = orig_depth_img->image;
+    }
+    else
+    {
+      orig_depth_img = cv_bridge::toCvShare (ros_depth_image, sensor_msgs::image_encodings::TYPE_16UC1);
+      orig_depth_img->image.convertTo(depth_image, CV_32F, 0.001);
+    }
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge Exception: %s", e.what());
     return;
   }
 
   // Convert the depth image into a char buffer
-  cv::Mat1f depth_image = orig_depth_img->image;
   unsigned char *buffer = bufferFromDepthImage(depth_image);
 
   // Compute the projection matrix from the camera_info 
@@ -278,9 +293,23 @@ void RealtimeURDFFilter::filter_callback
     //out_masked_depth.header.frame_id = cam_frame_;
     //out_masked_depth.header.stamp = ros_depth_image->header.stamp;
     out_masked_depth.header = ros_depth_image->header;
-    out_masked_depth.encoding = "32FC1";
+    out_masked_depth.encoding = sensor_msgs::image_encodings::TYPE_32FC1;
     out_masked_depth.image = masked_depth_image;
-    depth_pub_.publish (out_masked_depth.toImageMsg (), camera_info);
+    depth_pub_.publish (out_masked_depth.toImageMsg(), camera_info);
+  }
+
+  if (depth_pub_raw_.getNumSubscribers() > 0)
+  {
+    cv::Mat masked_depth_image (height_, width_, CV_32FC1, masked_depth_);
+    cv::Mat masked_depth_image_raw;
+    masked_depth_image.convertTo(masked_depth_image_raw, CV_16U, 1000.0);
+    cv_bridge::CvImage out_masked_depth;
+    //out_masked_depth.header.frame_id = cam_frame_;
+    //out_masked_depth.header.stamp = ros_depth_image->header.stamp;
+    out_masked_depth.header = ros_depth_image->header;
+    out_masked_depth.encoding = sensor_msgs::image_encodings::TYPE_16UC1;
+    out_masked_depth.image = masked_depth_image_raw;
+    depth_pub_.publish (out_masked_depth.toImageMsg(), camera_info);
   }
 
   if (mask_pub_.getNumSubscribers() > 0)
@@ -613,8 +642,9 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
   fbo_->endCapture();
   glPopAttrib();
 
+  // TODO: Check why this one only puts out a blue image and no mask.
   // Use stencil buffer to draw a red / blue mask into color attachment 3
-  if (need_mask_ || show_gui_) {
+  /*if (need_mask_ || show_gui_) {
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
     fbo_->beginCapture();
@@ -681,7 +711,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
     fbo_->endCapture();
 
     glPopAttrib();
-  }
+  }*/
 
   // Render all color buffer attachments into window
   if (show_gui_) {
