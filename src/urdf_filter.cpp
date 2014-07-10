@@ -309,7 +309,7 @@ void RealtimeURDFFilter::filter_callback
     out_masked_depth.header = ros_depth_image->header;
     out_masked_depth.encoding = sensor_msgs::image_encodings::TYPE_16UC1;
     out_masked_depth.image = masked_depth_image_raw;
-    depth_pub_.publish (out_masked_depth.toImageMsg(), camera_info);
+    depth_pub_raw_.publish (out_masked_depth.toImageMsg(), camera_info);
   }
 
   if (mask_pub_.getNumSubscribers() > 0)
