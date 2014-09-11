@@ -1,23 +1,25 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(ROS_BUILD_TYPE Debug)
-
-rosbuild_init()
-
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+cmake_minimum_required(VERSION 2.8.6)
+project(realtime_urdf_filter)
 
 # for future reference. you can ignore this.
 #cmake_policy(SET CMP0012 NEW)
+
+find_package(catkin REQUIRED COMPONENTS 
+  urdf
+  tf
+  resource_retriever
+  sensor_msgs
+  cv_bridge
+  nodelet
+  image_transport
+  urdfdom_headers)
+
+catkin_package(
+  INCLUDE_DIRS include)
+
+include_directories(include)
+
+find_package(Boost REQUIRED COMPONENTS signals)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/)
 find_package(OpenNI)
@@ -36,30 +38,33 @@ find_path( freeglut_INCLUDE_DIR GL/freeglut.h
   /opt/graphics/OpenGL/contrib/libglut
   )
 include_directories(${freeglut_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIRS})
 
-rosbuild_add_library (FBO src/FrameBufferObject.cpp)
-target_link_libraries (FBO GLEW)
+add_library (FBO src/FrameBufferObject.cpp )
+target_link_libraries (FBO GLEW ${catkin_LIBRARIES})
 
-rosbuild_add_library (shaderwrapper src/shader_wrapper.cpp)
+add_library (shaderwrapper src/shader_wrapper.cpp)
+target_link_libraries(shaderwrapper ${catkin_LIBRARIES})
 
-rosbuild_add_library (urdf_filter 
+add_library (urdf_filter 
   src/urdf_filter.cpp
   src/urdf_renderer.cpp 
   src/renderable.cpp)
 target_link_libraries (urdf_filter
+  ${catkin_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${freeglut_LIBRARY} 
   ${OpenCV_LIBS}
   FBO
   shaderwrapper
-  assimp)
-rosbuild_link_boost(urdf_filter signals)
+  assimp
+  ${Boost_LIBRARIES})
 
-rosbuild_add_executable (urdf_filtered_tracker src/urdf_filtered_tracker.cpp)
+add_executable (urdf_filtered_tracker src/urdf_filtered_tracker.cpp)
 target_link_libraries (urdf_filtered_tracker urdf_filter OpenNI)
 
-rosbuild_add_executable (realtime_urdf_filter src/realtime_urdf_filter.cpp)
+add_executable (realtime_urdf_filter src/realtime_urdf_filter.cpp)
 target_link_libraries (realtime_urdf_filter urdf_filter)
 
-rosbuild_add_library (realtime_urdf_filter_nodelet src/realtime_urdf_filter_nodelet.cpp)
+add_library (realtime_urdf_filter_nodelet src/realtime_urdf_filter_nodelet.cpp)
 target_link_libraries (realtime_urdf_filter_nodelet urdf_filter)

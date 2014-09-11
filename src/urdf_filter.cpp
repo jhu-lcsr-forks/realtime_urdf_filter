@@ -263,7 +263,7 @@ void RealtimeURDFFilter::filter_callback
   unsigned char *buffer = bufferFromDepthImage(depth_image);
 
   // Compute the projection matrix from the camera_info 
-  double projection_matrix[16];
+  tfScalar projection_matrix[16];
   getProjectionMatrix (camera_info, projection_matrix);
 
   // Filter the image
@@ -423,7 +423,7 @@ void RealtimeURDFFilter::initFrameBufferObject ()
 
 // compute Projection matrix from CameraInfo message
 void RealtimeURDFFilter::getProjectionMatrix (
-    const sensor_msgs::CameraInfo::ConstPtr& info, btScalar* glTf)
+    const sensor_msgs::CameraInfo::ConstPtr& info, tfScalar* glTf)
 {
   tf::Vector3 position;
   tf::Quaternion orientation;
@@ -565,7 +565,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
   glEnd();
  
   // Transformation matrix
-  btScalar glTf[16];
+  double glTf[16];
   
   // Apply user-defined camera offset transformation (launch file)
   tf::Transform transform (camera_offset_q_, camera_offset_t_);

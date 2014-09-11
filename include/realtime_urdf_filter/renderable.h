@@ -33,9 +33,7 @@
 
 #include <GL3/gl3.h>
 #include <tf/tf.h>
-// this is necessary for diamondback. for more recent ROS versions, use:
-// #include <urdf_interface/color.h>
-#include <urdf_interface/color.h>
+#include <urdf_model/color.h>
 
 #include <assimp/aiScene.h>
 
