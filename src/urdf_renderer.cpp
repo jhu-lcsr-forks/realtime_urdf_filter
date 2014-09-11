@@ -94,43 +94,51 @@ namespace realtime_urdf_filter
   /** \brief Processes a single URDF link, creates renderable for it */
   void URDFRenderer::process_link (boost::shared_ptr<urdf::Link> link)
   {
-    if (link->visual.get() == NULL || link->visual->geometry.get() == NULL)
-      return;
+    for(std::vector<boost::shared_ptr<urdf::Visual> >::iterator it=link->visual_array.begin();
+        it != link->visual_array.end();
+        ++it)
+    {
+      boost::shared_ptr<urdf::Visual> visual = *it;
 
-    boost::shared_ptr<Renderable> r;
-    if (link->visual->geometry->type == urdf::Geometry::BOX)
-    {
-      boost::shared_ptr<urdf::Box> box = boost::dynamic_pointer_cast<urdf::Box> (link->visual->geometry);
-      r.reset (new RenderableBox (box->dim.x, box->dim.y, box->dim.z));
+      if (visual.get() == NULL || visual->geometry.get() == NULL)
+        continue;
+
+      ROS_DEBUG_STREAM("Processing link: "<<link->name);
+
+      boost::shared_ptr<Renderable> r;
+      if (visual->geometry->type == urdf::Geometry::BOX)
+      {
+        boost::shared_ptr<urdf::Box> box = boost::dynamic_pointer_cast<urdf::Box> (visual->geometry);
+        r.reset (new RenderableBox (box->dim.x, box->dim.y, box->dim.z));
+      }
+      else if (visual->geometry->type == urdf::Geometry::CYLINDER)
+      {
+        boost::shared_ptr<urdf::Cylinder> cylinder = boost::dynamic_pointer_cast<urdf::Cylinder> (visual->geometry);
+        r.reset (new RenderableCylinder (cylinder->radius, cylinder->length));
+      }
+      else if (visual->geometry->type == urdf::Geometry::SPHERE)
+      {
+        boost::shared_ptr<urdf::Sphere> sphere = boost::dynamic_pointer_cast<urdf::Sphere> (visual->geometry);
+        r.reset (new RenderableSphere (sphere->radius));
+      }
+      else if (visual->geometry->type == urdf::Geometry::MESH)
+      {
+        boost::shared_ptr<urdf::Mesh> mesh = boost::dynamic_pointer_cast<urdf::Mesh> (visual->geometry);
+        std::string meshname (mesh->filename);
+        RenderableMesh* rm = new RenderableMesh (meshname);
+        rm->setScale (mesh->scale.x, mesh->scale.y, mesh->scale.z);
+        r.reset (rm);
+      }
+      r->setLinkName (tf_prefix_+ "/" + link->name);
+      urdf::Vector3 origin = visual->origin.position;
+      urdf::Rotation rotation = visual->origin.rotation;
+      r->link_offset = tf::Transform (
+          tf::Quaternion (rotation.x, rotation.y, rotation.z, rotation.w).normalize (),
+          tf::Vector3 (origin.x, origin.y, origin.z));
+      if (visual && (visual->material))
+        r->color  = visual->material->color;
+      renderables_.push_back (r); 
     }
-    else if (link->visual->geometry->type == urdf::Geometry::CYLINDER)
-    {
-      boost::shared_ptr<urdf::Cylinder> cylinder = boost::dynamic_pointer_cast<urdf::Cylinder> (link->visual->geometry);
-      r.reset (new RenderableCylinder (cylinder->radius, cylinder->length));
-    }
-    else if (link->visual->geometry->type == urdf::Geometry::SPHERE)
-    {
-      boost::shared_ptr<urdf::Sphere> sphere = boost::dynamic_pointer_cast<urdf::Sphere> (link->visual->geometry);
-      r.reset (new RenderableSphere (sphere->radius));
-    }
-    else if (link->visual->geometry->type == urdf::Geometry::MESH)
-    {
-      boost::shared_ptr<urdf::Mesh> mesh = boost::dynamic_pointer_cast<urdf::Mesh> (link->visual->geometry);
-      std::string meshname (mesh->filename);
-      RenderableMesh* rm = new RenderableMesh (meshname);
-      rm->setScale (mesh->scale.x, mesh->scale.y, mesh->scale.z);
-      r.reset (rm);
-    }
-    r->setLinkName (tf_prefix_+ "/" + link->name);
-    urdf::Vector3 origin = link->visual->origin.position;
-    urdf::Rotation rotation = link->visual->origin.rotation;
-    r->link_offset = tf::Transform (
-        tf::Quaternion (rotation.x, rotation.y, rotation.z, rotation.w).normalize (),
-        tf::Vector3 (origin.x, origin.y, origin.z));
-    if (link->visual && 
-        (link->visual->material))
-      r->color  = link->visual->material->color;
-    renderables_.push_back (r); 
   }
 
   ////////////////////////////////////////////////////////////////////////////////

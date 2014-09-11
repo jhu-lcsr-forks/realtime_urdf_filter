@@ -229,12 +229,12 @@ void RealtimeURDFFilter::filter (
       sum += *it;
     }
 
-    std::cout << "Average framerate: " 
+    ROS_DEBUG_STREAM("Average framerate: " 
       << std::setprecision(3) << double(count)/double(now - last) << " Hz " 
       << " (min: "<< min
       << ", max: " << max 
       << ", avg: " << sum / timings.size()
-      << " ms)" << std::endl;
+      << " ms)");
     count = 0;
     last = now;
     timings.clear();
@@ -246,8 +246,7 @@ void RealtimeURDFFilter::filter_callback
      (const sensor_msgs::ImageConstPtr& ros_depth_image,
       const sensor_msgs::CameraInfo::ConstPtr& camera_info)
 {
-  // Debugging
-  ROS_DEBUG_STREAM("Received image with camera info: "<<*camera_info);
+  //ROS_DEBUG_STREAM("Received image with camera info: "<<*camera_info);
 
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
@@ -297,7 +296,7 @@ void RealtimeURDFFilter::filter_callback
 
 void RealtimeURDFFilter::textureBufferFromDepthBuffer(unsigned char* buffer, int size_in_bytes)
 {    
-  ROS_DEBUG("Texture buffer from depth buffer...");
+  ROS_DEBUG_NAMED("buffers","Texture buffer from depth buffer...");
   // check if we already have a PBO 
   if (depth_image_pbo_ == GL_INVALID_VALUE) {
     ROS_DEBUG("Generating Pixel Buffer Object...");
@@ -489,7 +488,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
   tf::StampedTransform camera_transform;
   try {
     tf_.lookupTransform (cam_frame_, fixed_frame_, ros::Time (), camera_transform);
-    ROS_DEBUG_STREAM("Camera to world translation "<<
+    ROS_DEBUG_STREAM_NAMED("tf","Camera to world translation "<<
         cam_frame_<<" -> "<<fixed_frame_<<
         " ["<<
         " "<<camera_transform.getOrigin().x()<<
