@@ -14,6 +14,7 @@ uniform float max_diff;
 float to_linear_depth (float d)
 {
   return (z_near * z_far / (z_near - z_far)) / (d - z_far / (z_far - z_near));
+
 }
 
 void main(void)
@@ -23,7 +24,8 @@ void main(void)
   gl_FragData[0] = vec4 (sensor_depth, sensor_depth, sensor_depth, 1.0);
 
   // second color attachment: opengl depth image
-  float virtual_depth = to_linear_depth (gl_FragCoord.z);
+  //float virtual_depth = to_linear_depth (gl_FragCoord.z);
+  float virtual_depth = (gl_FragCoord.z / gl_FragCoord.w);
   gl_FragData[1] = vec4 (virtual_depth, virtual_depth, virtual_depth, 1.0);
 
   // third color attachment: normal visualization
@@ -33,7 +35,7 @@ void main(void)
                          1.0);
 
   // fourth color attachment: difference image
-  bool should_filter = (virtual_depth - sensor_depth) > max_diff;
+  bool should_filter = (sensor_depth - virtual_depth) > max_diff;
 
   if (should_filter)
     gl_FragData[1] = vec4 (replace_value, 0.0, 0.0, 1.0); //  that should make it red

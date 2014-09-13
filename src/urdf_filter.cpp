@@ -34,7 +34,7 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
 
-#define USE_OWN_CALIBRATION
+//#define USE_OWN_CALIBRATION
 
 using namespace realtime_urdf_filter;
 
@@ -251,14 +251,16 @@ void RealtimeURDFFilter::filter_callback
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
   try {
-    orig_depth_img = cv_bridge::toCvShare (ros_depth_image, sensor_msgs::image_encodings::TYPE_32FC1);
+      orig_depth_img = cv_bridge::toCvShare( ros_depth_image);
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge Exception: %s", e.what());
     return;
   }
 
   // Convert the depth image into a char buffer
-  cv::Mat1f depth_image = orig_depth_img->image;
+  cv::Mat depth_image_float;
+  orig_depth_img->image.convertTo(depth_image_float, CV_32FC1, 1.0/1000.0);
+  cv::Mat1f depth_image = depth_image_float;
   unsigned char *buffer = bufferFromDepthImage(depth_image);
 
   // Compute the projection matrix from the camera_info 
@@ -438,10 +440,10 @@ void RealtimeURDFFilter::getProjectionMatrix (
   double cx = P[2];
   double cy = P[6];
 #else
-  double fx = info->P[0] * 0.5;
-  double fy = info->P[5] * 0.5;
-  double cx = info->P[2] * 0.5;
-  double cy = (info->P[6]) * 0.5 - 48;
+  double fx = info->P[0];// * 0.5;
+  double fy = info->P[5];// * 0.5;
+  double cx = info->P[2];// * 0.5;
+  double cy = (info->P[6]);// * 0.5 - 48;
 
   // TODO: check if this does the right thing with respect to registered depth / camera info
   // Add the camera's translation relative to the left camera (from P[3]);
