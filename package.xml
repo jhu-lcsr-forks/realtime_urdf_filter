@@ -8,10 +8,9 @@
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  
+
   <build_depend>urdf</build_depend>
   <build_depend>tf</build_depend>
-  <build_depend>openni</build_depend>
   <build_depend>resource_retriever</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>cv_bridge</build_depend>
@@ -21,16 +20,16 @@
 
   <run_depend>urdf</run_depend>
   <run_depend>tf</run_depend>
-  <run_depend>openni</run_depend>
   <run_depend>resource_retriever</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>cv_bridge</run_depend>
   <run_depend>nodelet</run_depend>
   <run_depend>image_transport</run_depend>
-  <run_depend>urdf_model</run_depend>
 
-  <build_depend>libglew1.6"</build_depend>
-  <build_depend>libglew1.6-dev"</build_depend>
+  <build_depend>libopenni-dev</build_depend>
+  <build_depend>libopenni-nite-dev</build_depend>
+  <build_depend>assimp-dev</build_depend>
+  <build_depend>libglew-dev</build_depend>
 
   <export>
     <nodelet plugin="${prefix}/plugins/nodelet_plugins.xml" />

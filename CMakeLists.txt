@@ -14,6 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   urdfdom_headers)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(assimp REQUIRED assimp)
+
 catkin_package(
   INCLUDE_DIRS include)
 
@@ -39,6 +42,7 @@ find_path( freeglut_INCLUDE_DIR GL/freeglut.h
   )
 include_directories(${freeglut_INCLUDE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${assimp_INCLUDE_DIRS})
 
 add_library (FBO src/FrameBufferObject.cpp )
 target_link_libraries (FBO GLEW ${catkin_LIBRARIES})
@@ -57,7 +61,7 @@ target_link_libraries (urdf_filter
   ${OpenCV_LIBS}
   FBO
   shaderwrapper
-  assimp
+  ${assimp_LIBRARIES}
   ${Boost_LIBRARIES})
 
 add_executable (urdf_filtered_tracker src/urdf_filtered_tracker.cpp)
