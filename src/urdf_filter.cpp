@@ -1,20 +1,20 @@
-/* 
+/*
  * Copyright (c) 2011, Nico Blodow <blodow@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
  *     * Neither the name of the Intelligent Autonomous Systems Group/
- *       Technische Universitaet Muenchen nor the names of its contributors 
- *       may be used to endorse or promote products derived from this software 
+ *       Technische Universitaet Muenchen nor the names of its contributors
+ *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -60,7 +60,7 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   fixed_frame_ = (std::string)v;
   ROS_INFO ("using fixed frame %s", fixed_frame_.c_str ());
 
-  // get camera frame name 
+  // get camera frame name
   // we do not read this from ROS message, for being able to run this within openni (self filtered tracker..)
   nh_.getParam ("camera_frame", v);
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "need a camera_frame paramter!");
@@ -106,7 +106,7 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   filter_replace_value_ = (double)v;
   ROS_INFO ("using filter replace value %f", filter_replace_value_);
 
-  // setup publishers 
+  // setup publishers
   depth_sub_ = image_transport_.subscribeCamera("input_depth", 10,
       &RealtimeURDFFilter::filter_callback, this);
   depth_pub_ = image_transport_.advertiseCamera("output_depth", 10);
@@ -125,7 +125,7 @@ void RealtimeURDFFilter::loadModels ()
 {
   XmlRpc::XmlRpcValue v;
   nh_.getParam ("models", v);
-  
+
   if (v.getType () == XmlRpc::XmlRpcValue::TypeArray)
   {
     for (int i = 0; i < v.size(); ++i)
@@ -192,7 +192,7 @@ void RealtimeURDFFilter::filter (
     height_ = height;
     this->initGL();
   }
-  
+
   // Load models / construct renderers
   if(renderers_.empty()) {
     return;
@@ -229,10 +229,10 @@ void RealtimeURDFFilter::filter (
       sum += *it;
     }
 
-    ROS_DEBUG_STREAM("Average framerate: " 
-      << std::setprecision(3) << double(count)/double(now - last) << " Hz " 
+    ROS_DEBUG_STREAM("Average framerate: "
+      << std::setprecision(3) << double(count)/double(now - last) << " Hz "
       << " (min: "<< min
-      << ", max: " << max 
+      << ", max: " << max
       << ", avg: " << sum / timings.size()
       << " ms)");
     count = 0;
@@ -251,19 +251,27 @@ void RealtimeURDFFilter::filter_callback
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
   try {
-      orig_depth_img = cv_bridge::toCvShare( ros_depth_image);
+    orig_depth_img = cv_bridge::toCvShare( ros_depth_image);
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge Exception: %s", e.what());
     return;
   }
 
+  unsigned char *buffer = NULL;
+
+  double depth_factor = 1.0;
+
+  if(orig_depth_img->image.type() == CV_16UC1) {
+    depth_factor = 1.0 / 1000.0;
+  }
+
   // Convert the depth image into a char buffer
   cv::Mat depth_image_float;
-  orig_depth_img->image.convertTo(depth_image_float, CV_32FC1, 1.0/1000.0);
+  orig_depth_img->image.convertTo(depth_image_float, CV_32FC1, depth_factor);
   cv::Mat1f depth_image = depth_image_float;
-  unsigned char *buffer = bufferFromDepthImage(depth_image);
+  buffer = bufferFromDepthImage(depth_image);
 
-  // Compute the projection matrix from the camera_info 
+  // Compute the projection matrix from the camera_info
   tfScalar projection_matrix[16];
   getProjectionMatrix (camera_info, projection_matrix);
 
@@ -297,9 +305,9 @@ void RealtimeURDFFilter::filter_callback
 }
 
 void RealtimeURDFFilter::textureBufferFromDepthBuffer(unsigned char* buffer, int size_in_bytes)
-{    
+{
   ROS_DEBUG_NAMED("buffers","Texture buffer from depth buffer...");
-  // check if we already have a PBO 
+  // check if we already have a PBO
   if (depth_image_pbo_ == GL_INVALID_VALUE) {
     ROS_DEBUG("Generating Pixel Buffer Object...");
     glGenBuffers(1, &depth_image_pbo_);
@@ -340,7 +348,7 @@ unsigned char* RealtimeURDFFilter::bufferFromDepthImage (cv::Mat1f depth_image)
     // Copy the image row by row
     for (int i = 0; i < depth_image.rows; i++) {
       memcpy(
-          (void*)(buffer + i * row_size), 
+          (void*)(buffer + i * row_size),
           (void*) &depth_image.data[i],
           row_size);
     }
@@ -362,7 +370,7 @@ void RealtimeURDFFilter::initGL ()
 
     //TODO: change this to use an offscreen pbuffer, so no window is necessary,
     //for now, we can just hide it (see below)
-    
+
     // The debug window shows a 3x2 grid of images
     glutInitWindowSize (960, 480);
     glutInitDisplayMode ( GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
@@ -382,7 +390,7 @@ void RealtimeURDFFilter::initGL ()
     throw std::runtime_error("ERROR: could not initialize GLEW!");
   }
 
-  // Set up FBO 
+  // Set up FBO
   // FIXME: Replace this with more robust / specialized FBO
   this->initFrameBufferObject();
 
@@ -390,15 +398,15 @@ void RealtimeURDFFilter::initGL ()
   this->loadModels();
 
   // Make sure we loaded something!
-  if(renderers_.empty()) { 
+  if(renderers_.empty()) {
     throw std::runtime_error("Could not load any models for filtering!");
   } else {
     ROS_INFO_STREAM("Loaded "<<renderers_.size()<<" models for filtering.");
   }
-  
-  // Alocate buffer for the masked depth image (float) 
+
+  // Alocate buffer for the masked depth image (float)
   masked_depth_ = (GLfloat*) malloc(width_ * height_ * sizeof(GLfloat));
-  // Alocate buffer for the mask (uchar) 
+  // Alocate buffer for the mask (uchar)
   mask_ = (GLubyte*) malloc(width_ * height_ * sizeof(GLubyte));
 }
 
@@ -471,7 +479,7 @@ void RealtimeURDFFilter::getProjectionMatrix (
 }
 
 void RealtimeURDFFilter::render (const double* camera_projection_matrix)
-{   
+{
   static const GLenum buffers[] = {
     GL_COLOR_ATTACHMENT0,
     GL_COLOR_ATTACHMENT1,
@@ -517,7 +525,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
 
   // Create shader programs
   static ShaderWrapper shader = ShaderWrapper::fromFiles(
-      "package://realtime_urdf_filter/include/shaders/urdf_filter.vert", 
+      "package://realtime_urdf_filter/include/shaders/urdf_filter.vert",
       "package://realtime_urdf_filter/include/shaders/urdf_filter.frag");
 
   err = glGetError();
@@ -525,7 +533,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
     ROS_ERROR("OpenGL ERROR compiling shaders: %s", gluErrorString(err));
     return;
   }
-  
+
   // Enable shader for this frame
   shader();
 
@@ -555,7 +563,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
 
   // Kinect has x right, y down, z into image
   gluLookAt (0,0,0, 0,0,1, 0,1,0);
-  
+
   // Draw background quad behind everything (just before the far plane)
   // Otherwise, the shader only sees kinect points where he rendered stuff
   glBegin(GL_QUADS);
@@ -564,10 +572,10 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
     glVertex3f( 100.0,  100.0, far_plane_*0.99);
     glVertex3f(-100.0,  100.0, far_plane_*0.99);
   glEnd();
- 
+
   // Transformation matrix
   double glTf[16];
-  
+
   // Apply user-defined camera offset transformation (launch file)
   tf::Transform transform (camera_offset_q_, camera_offset_t_);
   transform.inverse().getOpenGLMatrix(glTf);
@@ -582,7 +590,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
 
   camera_transform.getOpenGLMatrix(glTf);
   glMultMatrixd((GLdouble*)glTf);
-  
+
   // Set up stencil buffer etc.
   // The background quad is not in the stencil buffer
   glEnable(GL_STENCIL_TEST);
@@ -609,7 +617,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
 
   // Disable shader
   glUseProgram((GLuint)NULL);
-  
+
   fbo_->endCapture();
   glPopAttrib();
 
@@ -633,7 +641,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
         glLoadIdentity();
         gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-        glMatrixMode(GL_MODELVIEW);	
+        glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
           glLoadIdentity();
 
@@ -662,7 +670,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
         glLoadIdentity();
         gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-        glMatrixMode(GL_MODELVIEW);	
+        glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
           glLoadIdentity();
 
@@ -692,7 +700,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
       glLoadIdentity();
       gluOrtho2D(0.0, 1.0, 0.0, 1.0);
 
-      glMatrixMode(GL_MODELVIEW);	
+      glMatrixMode(GL_MODELVIEW);
       glPushMatrix();
         glLoadIdentity();
 
@@ -748,7 +756,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
           glVertex2f(0.333, 0.5);
         glEnd();
 
-        // draw depth buffer 
+        // draw depth buffer
         fbo_->bindDepth();
         glBegin(GL_QUADS);
           glTexCoord2f(0.0, fbo_->getHeight());
@@ -764,7 +772,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
       glPopMatrix();
       glMatrixMode(GL_PROJECTION);
     glPopMatrix();
-  } 
+  }
 
   fbo_->bind(1);
   glGetTexImage (fbo_->getTextureTarget(), 0, GL_RED, GL_FLOAT, masked_depth_);
