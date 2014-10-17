@@ -251,17 +251,25 @@ void RealtimeURDFFilter::filter_callback
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
   try {
-      orig_depth_img = cv_bridge::toCvShare( ros_depth_image);
+    orig_depth_img = cv_bridge::toCvShare( ros_depth_image);
   } catch (cv_bridge::Exception& e) {
     ROS_ERROR("cv_bridge Exception: %s", e.what());
     return;
   }
 
+  unsigned char *buffer = NULL;
+
+  double depth_factor = 1.0;
+
+  if(orig_depth_img->image.type() == CV_16UC1) {
+    depth_factor = 1.0 / 1000.0;
+  }
+
   // Convert the depth image into a char buffer
   cv::Mat depth_image_float;
-  orig_depth_img->image.convertTo(depth_image_float, CV_32FC1, 1.0/1000.0);
+  orig_depth_img->image.convertTo(depth_image_float, CV_32FC1, depth_factor);
   cv::Mat1f depth_image = depth_image_float;
-  unsigned char *buffer = bufferFromDepthImage(depth_image);
+  buffer = bufferFromDepthImage(depth_image);
 
   // Compute the projection matrix from the camera_info
   tfScalar projection_matrix[16];
