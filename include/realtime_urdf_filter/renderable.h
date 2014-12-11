@@ -98,7 +98,7 @@ struct RenderableCylinder : public Renderable
 // meshes are a tad more complicated than boxes and spheres
 struct RenderableMesh : public Renderable
 {
-  RenderableMesh (std::string meshname);
+  RenderableMesh (std::string meshname, double inflation);
 
   virtual void render ();
   void setScale (float x, float y, float z);
@@ -133,6 +133,7 @@ private:
   double scale_z;
 
   std::string meshname_;
+  double inflation_;
 };
 
 

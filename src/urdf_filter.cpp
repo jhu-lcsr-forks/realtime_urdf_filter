@@ -165,12 +165,17 @@ void RealtimeURDFFilter::loadModels ()
       std::string geometry_type;
       nh_.getParam("geometry_type", geometry_type);
 
+      // get inflation parameter
+      double inflation = 0.0;
+      nh_.param("inflation", inflation, 0.0);
+
       // finally, set the model description so we can later parse it.
       ROS_INFO ("Loading URDF model: %s", description_param.c_str ());
       renderers_.push_back (
           new URDFRenderer (
               content, tf_prefix, cam_frame_, fixed_frame_, tf_,
-              (geometry_type == "collision" ? URDFRenderer::COLLISION : URDFRenderer::VISUAL)));
+              (geometry_type == "collision" ? URDFRenderer::COLLISION : URDFRenderer::VISUAL),
+              inflation));
     }
   }
   else

@@ -46,13 +46,15 @@ namespace realtime_urdf_filter
                               std::string cam_frame,
                               std::string fixed_frame,
                               tf::TransformListener &tf,
-                              GeometryType geometry_type)
+                              GeometryType geometry_type,
+                              double inflation)
     : model_description_(model_description)
     , tf_prefix_(tf_prefix)
     , camera_frame_ (cam_frame)
     , fixed_frame_(fixed_frame)
     , tf_(tf)
     , geometry_type_(geometry_type)
+    , inflation_(inflation)
   {
     initURDFModel ();
     tf_.setExtrapolationLimit (ros::Duration (5.0));
@@ -101,23 +103,23 @@ namespace realtime_urdf_filter
       if (geom->type == urdf::Geometry::BOX)
       {
         boost::shared_ptr<urdf::Box> box = boost::dynamic_pointer_cast<urdf::Box> (geom);
-        r.reset (new RenderableBox (box->dim.x, box->dim.y, box->dim.z));
+        r.reset (new RenderableBox (box->dim.x + inflation_, box->dim.y + inflation_, box->dim.z + inflation_));
       }
       else if (geom->type == urdf::Geometry::CYLINDER)
       {
         boost::shared_ptr<urdf::Cylinder> cylinder = boost::dynamic_pointer_cast<urdf::Cylinder> (geom);
-        r.reset (new RenderableCylinder (cylinder->radius, cylinder->length));
+        r.reset (new RenderableCylinder (cylinder->radius + inflation_, cylinder->length + inflation_));
       }
       else if (geom->type == urdf::Geometry::SPHERE)
       {
         boost::shared_ptr<urdf::Sphere> sphere = boost::dynamic_pointer_cast<urdf::Sphere> (geom);
-        r.reset (new RenderableSphere (sphere->radius));
+        r.reset (new RenderableSphere (sphere->radius + inflation_));
       }
       else if (geom->type == urdf::Geometry::MESH)
       {
         boost::shared_ptr<urdf::Mesh> mesh = boost::dynamic_pointer_cast<urdf::Mesh> (geom);
         std::string meshname (mesh->filename);
-        RenderableMesh* rm = new RenderableMesh (meshname);
+        RenderableMesh* rm = new RenderableMesh (meshname, inflation_);
         rm->setScale (mesh->scale.x, mesh->scale.y, mesh->scale.z);
         r.reset (rm);
       }

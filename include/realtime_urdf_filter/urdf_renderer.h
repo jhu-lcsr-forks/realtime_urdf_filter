@@ -49,7 +49,11 @@ class URDFRenderer
       COLLISION = 1
     };
 
-    URDFRenderer (std::string model_description, std::string tf_prefix, std::string cam_frame, std::string fixed_frame, tf::TransformListener &tf, GeometryType geometry_type = VISUAL);
+    URDFRenderer (std::string model_description, std::string tf_prefix,
+                  std::string cam_frame, std::string fixed_frame,
+                  tf::TransformListener &tf,
+                  GeometryType geometry_type = VISUAL, 
+                  double inflation = 0.0);
     void render ();
 
   protected:
@@ -72,6 +76,7 @@ class URDFRenderer
     std::vector<boost::shared_ptr<Renderable> > renderables_;
     tf::TransformListener &tf_;
     GeometryType geometry_type_;
+    double inflation_;
 };
 
 } // end namespace
