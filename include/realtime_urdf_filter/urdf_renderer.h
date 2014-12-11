@@ -44,12 +44,19 @@ namespace realtime_urdf_filter
 class URDFRenderer
 { 
   public:
-    URDFRenderer (std::string model_description, std::string tf_prefix, std::string cam_frame, std::string fixed_frame, tf::TransformListener &tf);
+    enum GeometryType {
+      VISUAL = 0,
+      COLLISION = 1
+    };
+
+    URDFRenderer (std::string model_description, std::string tf_prefix, std::string cam_frame, std::string fixed_frame, tf::TransformListener &tf, GeometryType geometry_type = VISUAL);
     void render ();
 
   protected:
     void initURDFModel ();
     void loadURDFModel (urdf::Model &descr);
+
+    boost::shared_ptr<Renderable> get_renderable(const boost::shared_ptr<urdf::Geometry> geom);
     void process_link (boost::shared_ptr<urdf::Link> link);
     void update_link_transforms ();
 
@@ -64,6 +71,7 @@ class URDFRenderer
     // rendering stuff 
     std::vector<boost::shared_ptr<Renderable> > renderables_;
     tf::TransformListener &tf_;
+    GeometryType geometry_type_;
 };
 
 } // end namespace

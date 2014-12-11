@@ -33,6 +33,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
+#include <algorithm>
 
 //#define USE_OWN_CALIBRATION
 
@@ -160,9 +161,16 @@ void RealtimeURDFFilter::loadModels ()
         continue;
       }
 
+      // determine if visual or collision geometry should be used
+      std::string geometry_type;
+      nh_.getParam("geometry_type", geometry_type);
+
       // finally, set the model description so we can later parse it.
       ROS_INFO ("Loading URDF model: %s", description_param.c_str ());
-      renderers_.push_back (new URDFRenderer (content, tf_prefix, cam_frame_, fixed_frame_, tf_));
+      renderers_.push_back (
+          new URDFRenderer (
+              content, tf_prefix, cam_frame_, fixed_frame_, tf_,
+              (geometry_type == "collision" ? URDFRenderer::COLLISION : URDFRenderer::VISUAL)));
     }
   }
   else

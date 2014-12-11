@@ -53,7 +53,7 @@ namespace realtime_urdf_filter
     glPushMatrix ();
 
     tf::Transform transform (link_to_fixed);
-    transform *= link_offset;
+    transform = transform * link_offset;
     tfScalar glTf[16];
     transform.getOpenGLMatrix(glTf);
     glMultMatrixd((GLdouble*)glTf);
@@ -300,7 +300,11 @@ namespace realtime_urdf_filter
   {
     Assimp::Importer importer;
     importer.SetIOHandler(new ResourceIOSystem());
-    const aiScene* scene = importer.ReadFile(meshname, aiProcess_PreTransformVertices|aiProcess_SortByPType|aiProcess_GenNormals|aiProcess_Triangulate|aiProcess_GenUVCoords|aiProcess_FlipUVs);
+    const aiScene* scene = importer.ReadFile(
+        meshname,
+        aiProcess_PreTransformVertices | aiProcess_SortByPType |
+        aiProcess_GenNormals | aiProcess_Triangulate | aiProcess_GenUVCoords |
+        aiProcess_FlipUVs);
     if (!scene)
     {
       ROS_ERROR("Could not load resource [%s]: %s", meshname.c_str(), importer.GetErrorString());
@@ -393,7 +397,9 @@ namespace realtime_urdf_filter
     for (unsigned int i = 0 ; i < mesh->mNumFaces ; ++i)
     {
         const aiFace& face = mesh->mFaces[i];
-        assert(face.mNumIndices == 3);
+        if(face.mNumIndices != 3) {
+          ROS_DEBUG_STREAM("Invalid face, only has "<<face.mNumIndices<<" indices, but should be composed of triangles.");
+        }
         indices.push_back(face.mIndices[0]);
         indices.push_back(face.mIndices[1]);
         indices.push_back(face.mIndices[2]);

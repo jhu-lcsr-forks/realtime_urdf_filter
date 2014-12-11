@@ -1,20 +1,20 @@
-/* 
+/*
  * Copyright (c) 2011, Nico Blodow <blodow@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
  *     * Neither the name of the Intelligent Autonomous Systems Group/
- *       Technische Universitaet Muenchen nor the names of its contributors 
- *       may be used to endorse or promote products derived from this software 
+ *       Technische Universitaet Muenchen nor the names of its contributors
+ *       may be used to endorse or promote products derived from this software
  *       without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -41,16 +41,18 @@
 
 namespace realtime_urdf_filter
 {
-  URDFRenderer::URDFRenderer (std::string model_description, 
+  URDFRenderer::URDFRenderer (std::string model_description,
                               std::string tf_prefix,
                               std::string cam_frame,
                               std::string fixed_frame,
-                              tf::TransformListener &tf)
+                              tf::TransformListener &tf,
+                              GeometryType geometry_type)
     : model_description_(model_description)
     , tf_prefix_(tf_prefix)
     , camera_frame_ (cam_frame)
     , fixed_frame_(fixed_frame)
     , tf_(tf)
+    , geometry_type_(geometry_type)
   {
     initURDFModel ();
     tf_.setExtrapolationLimit (ros::Duration (5.0));
@@ -92,53 +94,98 @@ namespace realtime_urdf_filter
 
   ////////////////////////////////////////////////////////////////////////////////
   /** \brief Processes a single URDF link, creates renderable for it */
-  void URDFRenderer::process_link (boost::shared_ptr<urdf::Link> link)
+  boost::shared_ptr<Renderable> URDFRenderer::get_renderable(const boost::shared_ptr<urdf::Geometry> geom)
   {
-    for(std::vector<boost::shared_ptr<urdf::Visual> >::iterator it=link->visual_array.begin();
-        it != link->visual_array.end();
-        ++it)
-    {
-      boost::shared_ptr<urdf::Visual> visual = *it;
-
-      if (visual.get() == NULL || visual->geometry.get() == NULL)
-        continue;
-
-      ROS_DEBUG_STREAM("Processing link: "<<link->name);
-
       boost::shared_ptr<Renderable> r;
-      if (visual->geometry->type == urdf::Geometry::BOX)
+
+      if (geom->type == urdf::Geometry::BOX)
       {
-        boost::shared_ptr<urdf::Box> box = boost::dynamic_pointer_cast<urdf::Box> (visual->geometry);
+        boost::shared_ptr<urdf::Box> box = boost::dynamic_pointer_cast<urdf::Box> (geom);
         r.reset (new RenderableBox (box->dim.x, box->dim.y, box->dim.z));
       }
-      else if (visual->geometry->type == urdf::Geometry::CYLINDER)
+      else if (geom->type == urdf::Geometry::CYLINDER)
       {
-        boost::shared_ptr<urdf::Cylinder> cylinder = boost::dynamic_pointer_cast<urdf::Cylinder> (visual->geometry);
+        boost::shared_ptr<urdf::Cylinder> cylinder = boost::dynamic_pointer_cast<urdf::Cylinder> (geom);
         r.reset (new RenderableCylinder (cylinder->radius, cylinder->length));
       }
-      else if (visual->geometry->type == urdf::Geometry::SPHERE)
+      else if (geom->type == urdf::Geometry::SPHERE)
       {
-        boost::shared_ptr<urdf::Sphere> sphere = boost::dynamic_pointer_cast<urdf::Sphere> (visual->geometry);
+        boost::shared_ptr<urdf::Sphere> sphere = boost::dynamic_pointer_cast<urdf::Sphere> (geom);
         r.reset (new RenderableSphere (sphere->radius));
       }
-      else if (visual->geometry->type == urdf::Geometry::MESH)
+      else if (geom->type == urdf::Geometry::MESH)
       {
-        boost::shared_ptr<urdf::Mesh> mesh = boost::dynamic_pointer_cast<urdf::Mesh> (visual->geometry);
+        boost::shared_ptr<urdf::Mesh> mesh = boost::dynamic_pointer_cast<urdf::Mesh> (geom);
         std::string meshname (mesh->filename);
         RenderableMesh* rm = new RenderableMesh (meshname);
         rm->setScale (mesh->scale.x, mesh->scale.y, mesh->scale.z);
         r.reset (rm);
       }
-      r->setLinkName (tf_prefix_+ "/" + link->name);
-      urdf::Vector3 origin = visual->origin.position;
-      urdf::Rotation rotation = visual->origin.rotation;
-      r->link_offset = tf::Transform (
-          tf::Quaternion (rotation.x, rotation.y, rotation.z, rotation.w).normalize (),
-          tf::Vector3 (origin.x, origin.y, origin.z));
-      if (visual && (visual->material))
-        r->color  = visual->material->color;
-      renderables_.push_back (r); 
-    }
+
+      return r;
+  }
+
+  void URDFRenderer::process_link (boost::shared_ptr<urdf::Link> link)
+  {
+    ROS_DEBUG_STREAM("realtime_urdf_filter: Processing link: "<<link->name);
+
+    urdf::Vector3 pos;
+    urdf::Rotation rot;
+
+    switch(geometry_type_) {
+      case VISUAL:
+        {
+          for(std::vector<boost::shared_ptr<urdf::Visual> >::iterator it=link->visual_array.begin();
+              it != link->visual_array.end();
+              ++it)
+          {
+            boost::shared_ptr<urdf::Visual> visual = *it;
+
+            if (!visual || !(visual->geometry))
+              continue;
+
+            boost::shared_ptr<Renderable> r = this->get_renderable(visual->geometry);
+            r->setLinkName (tf_prefix_+ "/" + link->name);
+
+            pos = visual->origin.position;
+            rot = visual->origin.rotation;
+
+            r->link_offset = tf::Transform (
+                tf::Quaternion (rot.x, rot.y, rot.z, rot.w).normalize (),
+                tf::Vector3(pos.x, pos.y, pos.z));
+
+            renderables_.push_back (r);
+          }
+          break;
+        }
+      case COLLISION:
+        {
+          for(std::vector<boost::shared_ptr<urdf::Collision> >::iterator it=link->collision_array.begin();
+              it != link->collision_array.end();
+              ++it)
+          {
+            boost::shared_ptr<urdf::Collision> collision = *it;
+
+            if (!collision || !(collision->geometry))
+              continue;
+
+            boost::shared_ptr<Renderable> r = this->get_renderable(collision->geometry);
+            r->setLinkName (tf_prefix_+ "/" + link->name);
+
+            pos = collision->origin.position;
+            rot = collision->origin.rotation;
+
+            ROS_INFO_STREAM("realtime_urdf_filter: "<<pos.x<<", "<<pos.y<<", "<<pos.z<<" | "<<rot.x<<", "<<rot.y<<", "<<rot.z);
+
+            r->link_offset = tf::Transform (
+                tf::Quaternion (rot.x, rot.y, rot.z, rot.w).normalize (),
+                tf::Vector3(pos.x, pos.y, pos.z));
+
+            renderables_.push_back (r);
+          }
+          break;
+        }
+    };
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -167,7 +214,7 @@ namespace realtime_urdf_filter
   void URDFRenderer::render ()
   {
     update_link_transforms ();
-      
+
     std::vector<boost::shared_ptr<Renderable> >::const_iterator it = renderables_.begin ();
     for (; it != renderables_.end (); it++)
       (*it)->render ();
