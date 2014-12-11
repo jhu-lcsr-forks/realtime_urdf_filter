@@ -515,7 +515,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
         "]"
         );
   } catch (tf::TransformException ex) {
-    ROS_ERROR("%s",ex.what());
+    ROS_ERROR("Could not look up camera to world transform: %s",ex.what());
     return;
   }
 
