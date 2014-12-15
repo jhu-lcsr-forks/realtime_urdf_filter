@@ -95,7 +95,7 @@ namespace realtime_urdf_filter
   }
 
   ////////////////////////////////////////////////////////////////////////////////
-  /** \brief Processes a single URDF link, creates renderable for it */
+  /** \brief Processes a single geometry element, creates a renderable for it */
   boost::shared_ptr<Renderable> URDFRenderer::get_renderable(const boost::shared_ptr<urdf::Geometry> geom)
   {
       boost::shared_ptr<Renderable> r;
@@ -127,6 +127,8 @@ namespace realtime_urdf_filter
       return r;
   }
 
+  ////////////////////////////////////////////////////////////////////////////////
+  /** \brief Processes a single URDF link, creates renderables for it */
   void URDFRenderer::process_link (boost::shared_ptr<urdf::Link> link)
   {
     ROS_DEBUG_STREAM("realtime_urdf_filter: Processing link: "<<link->name);
@@ -224,6 +226,7 @@ namespace realtime_urdf_filter
 
 }
 
+#if 0
 // REGEX BASED LINK / SEARCH OPERATIONS / TARGET FRAMES SETUP
 //    for (sop_it = search_operations_.begin (); sop_it != search_operations_.end (); sop_it++)
 //    {
@@ -302,3 +305,4 @@ namespace realtime_urdf_filter
 //        ROS_INFO ("No match: %s (%s)", link->name.c_str(), sop_it->re.str().c_str());
 //      }
 //    }
+#endif

@@ -19,14 +19,18 @@ float to_linear_depth (float d)
 
 void main(void)
 {
-  // first color attachment: sensor depth image
   float sensor_depth = texelFetch (depth_texture, int(gl_FragCoord.y)*width + int(gl_FragCoord.x)).x;
+  //float virtual_depth = to_linear_depth (gl_FragCoord.z);
+  float virtual_depth = (gl_FragCoord.z / gl_FragCoord.w);
+  bool should_filter = (sensor_depth - virtual_depth) > max_diff;
+
+  // first color attachment: sensor depth image
   gl_FragData[0] = vec4 (sensor_depth, sensor_depth, sensor_depth, 1.0);
 
   // second color attachment: opengl depth image
-  //float virtual_depth = to_linear_depth (gl_FragCoord.z);
-  float virtual_depth = (gl_FragCoord.z / gl_FragCoord.w);
-  gl_FragData[1] = vec4 (virtual_depth, virtual_depth, virtual_depth, 1.0);
+  gl_FragData[1] = mix(vec4 (sensor_depth, sensor_depth, sensor_depth, 1.0),
+                       vec4 (replace_value, 0.0, 0.0, 1.0),
+                       should_filter);
 
   // third color attachment: normal visualization
   gl_FragData[2] = vec4 ((normal.x + 1.0) * 0.5,
@@ -34,13 +38,8 @@ void main(void)
                          (normal.z + 1.0) * 0.5,
                          1.0);
 
-  // fourth color attachment: difference image
-  bool should_filter = (sensor_depth - virtual_depth) > max_diff;
-
-  if (should_filter)
-    gl_FragData[1] = vec4 (replace_value, 0.0, 0.0, 1.0); //  that should make it red
-  else
-    gl_FragData[1] = vec4 (sensor_depth, sensor_depth, sensor_depth, 1.0); // grayscale depth image
+  // fourth color attachment: mask image
+  gl_FragData[3] = vec4(should_filter, 0.0, 0.0, 0.0);
 }
 
 		

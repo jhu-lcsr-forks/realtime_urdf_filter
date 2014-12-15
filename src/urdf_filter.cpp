@@ -635,6 +635,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
   glPopAttrib();
 
   // Use stencil buffer to draw a red / blue mask into color attachment 3
+#if 0
   if (need_mask_ || show_gui_) {
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
@@ -703,6 +704,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
 
     glPopAttrib();
   }
+#endif
 
   // Render all color buffer attachments into window
   if (show_gui_) {
