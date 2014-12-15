@@ -68,3 +68,29 @@ target_link_libraries (realtime_urdf_filter urdf_filter)
 
 add_library (realtime_urdf_filter_nodelet src/realtime_urdf_filter_nodelet.cpp)
 target_link_libraries (realtime_urdf_filter_nodelet urdf_filter)
+
+# install targets
+install(DIRECTORY include/ DESTINATION include)
+
+# moveit plugin
+find_package(moveit_ros_perception)
+
+if(moveit_ros_perception_FOUND)
+  find_package(Eigen REQUIRED)
+  set(MOVEIT_LIB_NAME realtime_urdf_filter_moveit_octomap_updater)
+
+  include_directories(${Eigen_INCLUDE_DIRS} ${moveit_ros_perception_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
+
+  add_library(${MOVEIT_LIB_NAME}_core
+    src/moveit_octomap_updater.cpp
+    )
+
+  target_link_libraries(${MOVEIT_LIB_NAME}_core ${moveit_ros_perception_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  add_library(${MOVEIT_LIB_NAME} src/moveit_octomap_updater_plugin.cpp)
+  target_link_libraries(${MOVEIT_LIB_NAME} ${MOVEIT_LIB_NAME}_core ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+  install(TARGETS ${MOVEIT_LIB_NAME}_core ${MOVEIT_LIB_NAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+else()
+  message(STATUS "moveit not found; not building moveit plugin")
+endif()
