@@ -79,6 +79,7 @@ RealtimeURDFFilterOctomapUpdater::~RealtimeURDFFilterOctomapUpdater()
 {
   filter_->stop();
 
+#if 0 // no need to delete these since they were initialized from static const char*
   if(argv_) {
     for(unsigned int i=0; i<argc_; i++) {
       delete argv_[i];
@@ -86,6 +87,7 @@ RealtimeURDFFilterOctomapUpdater::~RealtimeURDFFilterOctomapUpdater()
     delete[] argv_;
     argc_ = 0;
   }
+#endif
 }
 
 bool RealtimeURDFFilterOctomapUpdater::setParams(XmlRpc::XmlRpcValue &params)
@@ -113,6 +115,7 @@ bool RealtimeURDFFilterOctomapUpdater::initialize()
 
 void RealtimeURDFFilterOctomapUpdater::start()
 {
+  filter_->advertise();
   filter_->subscribe(boost::bind(&RealtimeURDFFilterOctomapUpdater::depthImageCallback, this, _1, _2));
 }
 

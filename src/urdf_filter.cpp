@@ -408,31 +408,28 @@ void RealtimeURDFFilter::textureBufferFromDepthBuffer(unsigned char* buffer, int
 unsigned char* RealtimeURDFFilter::bufferFromDepthImage (cv::Mat1f depth_image)
 {
   // Host buffer to hold depth pixel data
-  static unsigned char* buffer = NULL;
+  static std::vector<unsigned char> buffer;
 
   // Try to get the pixel data from cv::Mat as one continuous buffer
   if (depth_image.isContinuous()) {
-    buffer = depth_image.data;
+    return depth_image.data;
   } else {
     // Get the size of each row in bytes
     int row_size = depth_image.cols * depth_image.elemSize();
 
     // Allocate the buffer
-    if (buffer == NULL) {
-      std::cout << "(re)allocating opengl depth buffer" << std::endl;
-      buffer = (unsigned char*) malloc(row_size * depth_image.rows);
-    }
+    buffer.resize(row_size * depth_image.rows);
 
     // Copy the image row by row
     for (int i = 0; i < depth_image.rows; i++) {
       memcpy(
-          (void*)(buffer + i * row_size),
+          (void*)(&buffer[0] + i * row_size),
           (void*) &depth_image.data[i],
           row_size);
     }
   }
 
-  return buffer;
+  return &buffer[0];
 }
 
 // set up OpenGL stuff
@@ -483,11 +480,11 @@ void RealtimeURDFFilter::initGL ()
   }
 
   // Alocate buffer for the masked depth image (float)
-  masked_depth_ = (GLfloat*) malloc(width_ * height_ * sizeof(GLfloat));
+  masked_depth_ = new GLfloat[width_ * height_];
   // Allocate buffer for labels
-  labeled_depth_ = (GLint*) malloc(width_ * height_ * sizeof(GLfloat));
+  labeled_depth_ = new GLint[width_ * height_];
   // Alocate buffer for the mask (uchar)
-  mask_ = (GLubyte*) malloc(width_ * height_ * sizeof(GLubyte));
+  mask_ = new GLubyte[width_ * height_];
 }
 
 // set up FBO

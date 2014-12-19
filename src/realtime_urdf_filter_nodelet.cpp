@@ -48,6 +48,7 @@ namespace realtime_urdf_filter
   {
     NODELET_DEBUG("Initializing nodelet...");
 
+#if 0 // no need to delete these since they were initialized from static const char*
     // Free previously allocated memory
     if(argv_) {
       for(unsigned int i=0; i<argc_; i++) {
@@ -56,6 +57,7 @@ namespace realtime_urdf_filter
       delete[] argv_;
       argc_ = 0;
     }
+#endif
 
     // Convert argv to c-style argc,argv for OpenGL subsystem
     args_ = this->getMyArgv();
