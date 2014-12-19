@@ -54,7 +54,7 @@ class URDFRenderer
                   tf::TransformListener &tf,
                   GeometryType geometry_type = VISUAL, 
                   double inflation = 0.0);
-    void render ();
+    void render (const ros::Time now);
 
   protected:
     void initURDFModel ();
@@ -62,7 +62,7 @@ class URDFRenderer
 
     boost::shared_ptr<Renderable> get_renderable(const boost::shared_ptr<urdf::Geometry> geom);
     void process_link (boost::shared_ptr<urdf::Link> link);
-    void update_link_transforms ();
+    void update_link_transforms (const ros::Time now);
 
     // urdf model stuff
     std::string model_description_;

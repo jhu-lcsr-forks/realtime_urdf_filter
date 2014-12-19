@@ -236,7 +236,7 @@ public:
     glTf[11]= -1;
 
 
-    filter->filter ((unsigned char*)buffer, glTf, depthMap.XRes(), depthMap.YRes());
+    filter->filter ((unsigned char*)buffer, glTf, depthMap.XRes(), depthMap.YRes(), ros::Time::now());
 
     GLfloat* masked_depth = filter->getMaskedDepth();
 

@@ -252,7 +252,7 @@ double RealtimeURDFFilter::getTime ()
 }
 
 void RealtimeURDFFilter::filter (
-    unsigned char* buffer, double* projection_matrix, int width, int height)
+    unsigned char* buffer, double* projection_matrix, int width, int height, const ros::Time ros_now)
 {
   static std::vector<double> timings;
   double begin = getTime();
@@ -281,7 +281,7 @@ void RealtimeURDFFilter::filter (
   textureBufferFromDepthBuffer(buffer, size_in_bytes);
 
   // render everything
-  this->render(projection_matrix);
+  this->render(projection_matrix, ros_now);
 
   // Timing
   static unsigned count = 0;
@@ -348,7 +348,7 @@ void RealtimeURDFFilter::filter_callback
   getProjectionMatrix (camera_info, projection_matrix);
 
   // Filter the image
-  this->filter(buffer, projection_matrix, depth_image.cols, depth_image.rows);
+  this->filter(buffer, projection_matrix, depth_image.cols, depth_image.rows, ros_depth_image->header.stamp);
 
   // publish processed depth image and image mask
   if (depth_pub_.getNumSubscribers() > 0)
@@ -558,7 +558,7 @@ void RealtimeURDFFilter::getProjectionMatrix (
   glTf[11]= -1;
 }
 
-void RealtimeURDFFilter::render (const double* camera_projection_matrix)
+void RealtimeURDFFilter::render (const double* camera_projection_matrix, const ros::Time now)
 {
   static const GLenum buffers[] = {
     GL_COLOR_ATTACHMENT0,
@@ -693,7 +693,7 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
   // render every renderable / urdf model
   std::vector<URDFRenderer*>::const_iterator r;
   for (r = renderers_.begin (); r != renderers_.end (); r++) {
-    (*r)->render ();
+    (*r)->render (now);
   }
 
   // Disable shader
