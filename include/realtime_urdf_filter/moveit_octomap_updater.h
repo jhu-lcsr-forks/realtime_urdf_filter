@@ -47,6 +47,10 @@
 #include <image_transport/image_transport.h>
 #include <boost/scoped_ptr.hpp>
 
+#include <realtime_urdf_filter/urdf_filter.h>
+#include <realtime_urdf_filter/urdf_renderer.h>
+#include <realtime_urdf_filter/depth_and_info_subscriber.h>
+
 namespace occupancy_map_monitor
 {
 class RealtimeURDFFilterOctomapUpdater : public OccupancyMapUpdater
@@ -63,11 +67,11 @@ public:
   virtual ShapeHandle excludeShape(const shapes::ShapeConstPtr &shape);
   virtual void forgetShape(ShapeHandle handle);
 
-private:
+protected:
 
   void depthImageCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::CameraInfoConstPtr& info_msg);
-  bool getShapeTransform(mesh_filter::MeshHandle h, Eigen::Affine3d &transform) const;
-  void stopHelper();
+
+private:
 
   ros::NodeHandle nh_;
   boost::shared_ptr<tf::Transformer> tf_;
@@ -98,7 +102,7 @@ private:
   unsigned int good_tf_;
   unsigned int failed_tf_;
 
-  boost::scoped_ptr<mesh_filter::MeshFilter<mesh_filter::StereoCameraModel> > mesh_filter_;
+  //boost::scoped_ptr<mesh_filter::MeshFilter<mesh_filter::StereoCameraModel> > mesh_filter_;
   boost::scoped_ptr<LazyFreeSpaceUpdater> free_space_updater_;
 
   std::vector<float> x_cache_, y_cache_;
@@ -106,6 +110,10 @@ private:
   std::vector<unsigned int> filtered_labels_;
   ros::WallTime last_depth_callback_start_;
 
+  ////
+  unsigned int argc_;
+  char** argv_;
+  boost::shared_ptr<realtime_urdf_filter::RealtimeURDFFilter> filter_;
 };
 }
 

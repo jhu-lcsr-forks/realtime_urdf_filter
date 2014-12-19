@@ -72,5 +72,6 @@ namespace realtime_urdf_filter
 
     // Create the filter
     filter_.reset(new realtime_urdf_filter::RealtimeURDFFilter(nh, argc_, argv_));
+    filter_->start();
   }
 }

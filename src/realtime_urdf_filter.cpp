@@ -41,6 +41,7 @@ int main (int argc, char **argv)
 
   // create RealtimeURDFFilter and subcribe to ROS
   realtime_urdf_filter::RealtimeURDFFilter f(nh, argc, argv);
+  f.start();
 
   // spin that shit!
   ros::spin ();

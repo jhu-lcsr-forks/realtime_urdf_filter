@@ -51,10 +51,35 @@ namespace realtime_urdf_filter
 class RealtimeURDFFilter
 {
   public:
+    typedef boost::function<void(const sensor_msgs::ImageConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&)> CallbackType;
+
     // constructor. sets up ros and reads in parameters
     RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **argv);
 
     ~RealtimeURDFFilter ();
+
+    // initialize, set params from nh, subscribe, and start working
+    void start ();
+
+    // stop subscribing
+    void stop ();
+
+    // set params from an xmlrpc value structure
+    void setParams (XmlRpc::XmlRpcValue &params);
+
+    // create subscribers
+    void subscribe ();
+
+    // subscribe with another callback
+    void subscribe( CallbackType callback);
+
+    void subscribe(
+        const std::string image_topic,
+        const size_t queue,
+        CallbackType callback);
+
+    // create publishers
+    void advertise ();
 
     // loads URDF models
     void loadModels ();
@@ -91,6 +116,9 @@ class RealtimeURDFFilter
     GLfloat* getMaskedDepth()
       {return masked_depth_;}
 
+    void getLables(
+        std::vector<unsigned int> &lables);
+
   public:
     // ROS objects
     ros::NodeHandle nh_;
@@ -115,7 +143,11 @@ class RealtimeURDFFilter
     tf::Quaternion camera_offset_q_;
     std::string cam_frame_;
     std::string fixed_frame_;
+    std::string image_topic_;
     bool show_gui_;
+    XmlRpc::XmlRpcValue models_;
+    URDFRenderer::GeometryType geometry_type_;
+    double inflation_;
 
     // do we have subscribers for the mask image?
     bool need_mask_;
@@ -140,6 +172,7 @@ class RealtimeURDFFilter
 
     // output from rendering
     GLfloat* masked_depth_;
+    GLint* labeled_depth_;
     GLubyte* mask_;
 };
 

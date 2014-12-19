@@ -26,7 +26,7 @@
 //
 // Credits:
 // Original RenderTexture code: Mark J. Harris
-//	parts of the code are used from the original RenderTexture  
+//	parts of the code are used from the original RenderTexture
 //
 // -----------------------------------------------------------------------------
 
@@ -130,15 +130,15 @@ FramebufferObject::~FramebufferObject() {
     if(_bColorAttachment) {
 
       for(int i=0; i<_numColorAttachments; i++) {
-        if(_bColorAttachmentRenderTexture) 
+        if(_bColorAttachmentRenderTexture)
           glDeleteTextures(1, &_colorAttachmentID[i]);
         else
           glDeleteRenderbuffers(1, &_colorAttachmentID[i]);
       }
-    } 
+    }
 
     if(_bDepthAttachment) {
-      if(_bDepthAttachmentRenderTexture) 
+      if(_bDepthAttachmentRenderTexture)
         glDeleteTextures(1, &_depthAttachmentID);
       else
         glDeleteRenderbuffers(1, &_depthAttachmentID);
@@ -149,7 +149,7 @@ FramebufferObject::~FramebufferObject() {
   }
 
   if(_bPassThroughProgramInitialized)
-    glDeleteProgramsARB(1, &_passThroughProgram); 
+    glDeleteProgramsARB(1, &_passThroughProgram);
 }
 
 // -----------------------------------------------------------------------------
@@ -168,7 +168,7 @@ FramebufferObject::getHeight() {
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::bind(int index) {
   glEnable(_textureTarget);
   glBindTexture(_textureTarget, _colorAttachmentID[index]);
@@ -181,7 +181,7 @@ FramebufferObject::bind(int index) {
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::bindDepth(void) {
   glEnable(_textureTarget);
   glBindTexture(_textureTarget, _depthAttachmentID);
@@ -194,59 +194,59 @@ FramebufferObject::bindDepth(void) {
 
 // -----------------------------------------------------------------------------
 
-GLuint					
+GLuint
 FramebufferObject::getColorAttachmentID(int index) {
   return _colorAttachmentID[index];
 }
 
 // -----------------------------------------------------------------------------
 
-GLuint					
+GLuint
 FramebufferObject::getDepthAttachmentID(void) {
   return _depthAttachmentID;
 }
 
 // -----------------------------------------------------------------------------
 
-GLuint					
+GLuint
 FramebufferObject::getStencilAttachmentID(void) {
   return _depthAttachmentID;
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::setMinFilter(GLint	minFilter) {
   _minFilter = minFilter;
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::setMagFilter(GLint	magFilter) {
   _magFilter = magFilter;
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::setWrapS(GLint	wrapS) {
   _wrapS = wrapS;
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::setWrapT(GLint	wrapT) {
   _wrapT = wrapT;
 }
 
 // -----------------------------------------------------------------------------
 
-bool						
+bool
 FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
-  if(_bInitialized) 
+  if(_bInitialized)
     return reInitialize( width, height );
 
   _width	= width;
@@ -258,7 +258,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
   //													"GL_NV_float_buffer "
   //													"GL_ARB_framebuffer_object "))
   //{
-  //		printf("Unable to load the following extension(s): %s\n\nExiting...\n", 
+  //		printf("Unable to load the following extension(s): %s\n\nExiting...\n",
   //						glh_get_unsupported_extensions());
   //		return false;
   //}
@@ -286,15 +286,15 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
     glGenProgramsARB(1, &_passThroughProgram);
 
-    const char* strPassThroughProgram = 
+    const char* strPassThroughProgram =
       "!!ARBfp1.0\n"
       "MOV result.color, fragment.color.primary;\n"
       "END\n";
 
     glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, _passThroughProgram);
-    glProgramStringARB(GL_FRAGMENT_PROGRAM_ARB, 
+    glProgramStringARB(GL_FRAGMENT_PROGRAM_ARB,
         GL_PROGRAM_FORMAT_ASCII_ARB,
-        strlen(strPassThroughProgram), 
+        strlen(strPassThroughProgram),
         strPassThroughProgram);
 
     _bPassThroughProgramInitialized = true;
@@ -303,7 +303,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
   glGetIntegerv(GL_MAX_DRAW_BUFFERS, &_maxNumDrawBuffers);
   if(_numColorAttachments > _maxNumDrawBuffers) {
-    cout << "WARNING: FramebufferObject::initialize - this machine only supports up to " << _maxNumDrawBuffers << " draw buffers. Reset number of color attachments!" << endl; 
+    cout << "WARNING: FramebufferObject::initialize - this machine only supports up to " << _maxNumDrawBuffers << " draw buffers. Reset number of color attachments!" << endl;
     _numColorAttachments = _maxNumDrawBuffers;
   }
 
@@ -333,7 +333,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         case RGB_8:
           numFormats	= _numInternal8Formats;
           format		= _internal8ColorFormats;
-          break;						
+          break;
         case RGBA_16:
           numFormats	= _numInternal16AFormats;
           format		= _internal16AColorFormats;
@@ -341,7 +341,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         case RGB_16:
           numFormats	= _numInternal16Formats;
           format		= _internal16ColorFormats;
-          break;	
+          break;
         case RGBA_32:
           numFormats	= _numInternal32AFormats;
           format		= _internal32AColorFormats;
@@ -349,7 +349,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         case RGB_32:
           numFormats	= _numInternal32Formats;
           format		= _internal32ColorFormats;
-          break;			
+          break;
       }
 
       // initialize texture
@@ -368,21 +368,21 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         glTexParameteri(_textureTarget, GL_TEXTURE_MAG_FILTER, _magFilter);
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-        glTexImage2D(	_textureTarget, 
-            0, 
-            _internalColorFormat, 
-            _width, 
-            _height, 
-            0, 
-            _colorFormat, 
-            _colorType, 
+        glTexImage2D(	_textureTarget,
+            0,
+            _internalColorFormat,
+            _width,
+            _height,
+            0,
+            _colorFormat,
+            _colorType,
             NULL);
 
         // attach texture to framebuffer color buffer
-        glFramebufferTexture2D(	GL_FRAMEBUFFER, 
-            GL_COLOR_ATTACHMENT0, 
+        glFramebufferTexture2D(	GL_FRAMEBUFFER,
+            GL_COLOR_ATTACHMENT0,
             _textureTarget,
-            _colorAttachmentID[0], 
+            _colorAttachmentID[0],
             0);
 
         success = checkFramebufferStatus();
@@ -405,14 +405,14 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         glTexParameteri(_textureTarget, GL_TEXTURE_MAG_FILTER, _magFilter);
         glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-        glTexImage2D(	_textureTarget, 
-            0, 
-            _internalColorFormat, 
-            _width, 
-            _height, 
-            0, 
-            _colorFormat, 
-            _colorType, 
+        glTexImage2D(	_textureTarget,
+            0,
+            _internalColorFormat,
+            _width,
+            _height,
+            0,
+            _colorFormat,
+            _colorType,
             NULL);
 
         GLint colorAttachmentMacro=GL_COLOR_ATTACHMENT0;
@@ -465,10 +465,10 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         }
 
         // attach texture to framebuffer color buffer
-        glFramebufferTexture2D(	GL_FRAMEBUFFER, 
-            colorAttachmentMacro, 
+        glFramebufferTexture2D(	GL_FRAMEBUFFER,
+            colorAttachmentMacro,
             _textureTarget,
-            _colorAttachmentID[i], 
+            _colorAttachmentID[i],
             0);
 
         success = checkFramebufferStatus();
@@ -480,7 +480,7 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
       //----------------------------------------------------------
 
-      if(!success) 
+      if(!success)
         printFramebufferStatus();
 
     } else {
@@ -494,9 +494,9 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
         // initialize color renderbuffer
         glBindRenderbuffer(GL_RENDERBUFFER, _colorAttachmentID[i]);
-        glRenderbufferStorage(	GL_RENDERBUFFER, 
+        glRenderbufferStorage(	GL_RENDERBUFFER,
             _internalColorFormat,
-            _width, 
+            _width,
             _height);
 
         GLint colorAttachmentMacro=GL_COLOR_ATTACHMENT0;
@@ -594,20 +594,20 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
       glTexParameteri(_textureTarget, GL_TEXTURE_MAG_FILTER, _magFilter);
       glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-      glTexImage2D(	_textureTarget, 
-          0, 
-          _internalDepthFormat, 
-          _width, 
-          _height, 
-          0, 
-          _depthFormat, 
-          _depthType, 
+      glTexImage2D(	_textureTarget,
+          0,
+          _internalDepthFormat,
+          _width,
+          _height,
+          0,
+          _depthFormat,
+          _depthType,
           NULL);
 
       // attach texture to framebuffer color buffer
       glFramebufferTexture2D(
-          GL_FRAMEBUFFER, 
-          GL_DEPTH_ATTACHMENT, 
+          GL_FRAMEBUFFER,
+          GL_DEPTH_ATTACHMENT,
           _textureTarget,
           _depthAttachmentID, 0);
 
@@ -616,15 +616,15 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
         printFramebufferStatus();
       }
 
-    } else {				
+    } else {
 
       glGenRenderbuffers(1, &_depthAttachmentID);
 
       // initialize depth renderbuffer
       glBindRenderbuffer(GL_RENDERBUFFER, _depthAttachmentID);
-      glRenderbufferStorage(	GL_RENDERBUFFER, 
+      glRenderbufferStorage(	GL_RENDERBUFFER,
           _internalDepthFormat,
-          _width, 
+          _width,
           _height);
 
       // attach renderbuffer to framebuffer depth buffer
@@ -664,22 +664,22 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
       glTexParameteri(_textureTarget, GL_TEXTURE_MAG_FILTER, _magFilter);
       glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-      glTexImage2D(	_textureTarget, 
-          0, 
-          _internalDepthFormat, 
-          _width, 
-          _height, 
-          0, 
-          _depthFormat, 
-          _depthType, 
+      glTexImage2D(	_textureTarget,
+          0,
+          _internalDepthFormat,
+          _width,
+          _height,
+          0,
+          _depthFormat,
+          _depthType,
           NULL);
 
       // glBindTexture( _textureTarget, 0);
 
       // attach texture to framebuffer color buffer
       glFramebufferTexture2D(
-          GL_FRAMEBUFFER, 
-          GL_DEPTH_ATTACHMENT, 
+          GL_FRAMEBUFFER,
+          GL_DEPTH_ATTACHMENT,
           _textureTarget,
           _depthAttachmentID, 0);
 
@@ -692,9 +692,9 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
       // initialize depth renderbuffer
       glBindRenderbuffer(GL_RENDERBUFFER, _depthAttachmentID);
-      glRenderbufferStorage(	GL_RENDERBUFFER, 
+      glRenderbufferStorage(	GL_RENDERBUFFER,
           _internalDepthFormat,
-          _width, 
+          _width,
           _height);
 
       // attach renderbuffer to framebuffer depth buffer
@@ -730,10 +730,10 @@ FramebufferObject::initialize(	unsigned int width, unsigned int height ) {
 
 // -----------------------------------------------------------------------------
 
-bool						
+bool
 FramebufferObject::reInitialize(	unsigned int width, unsigned int height, const char *strMode ) {
 
-  if(!_bInitialized) 
+  if(!_bInitialized)
     return initialize( width, height );
 
   if(!_bFBOSupported)
@@ -745,14 +745,14 @@ FramebufferObject::reInitialize(	unsigned int width, unsigned int height, const 
   glDeleteFramebuffers(1, &_frameBufferID);
 
   if(_bColorAttachment) {
-    if(_bColorAttachmentRenderTexture) 
+    if(_bColorAttachmentRenderTexture)
       glDeleteTextures(1, &_colorAttachmentID[0]);
-    else 
+    else
       glDeleteRenderbuffers(1, &_colorAttachmentID[0]);
   }
 
   if(_bDepthAttachment) {
-    if(_bDepthAttachmentRenderTexture) 
+    if(_bDepthAttachmentRenderTexture)
       glDeleteTextures(1, &_depthAttachmentID);
     else
       glDeleteRenderbuffers(1, &_depthAttachmentID);
@@ -769,7 +769,7 @@ FramebufferObject::reInitialize(	unsigned int width, unsigned int height, const 
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::beginCapture(bool bEnablePassThroughShader) {
 
   glGetIntegerv(GL_VIEWPORT, _viewport);
@@ -781,12 +781,12 @@ FramebufferObject::beginCapture(bool bEnablePassThroughShader) {
   if(_bFloatColorBuffer && bEnablePassThroughShader) {
     glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, _passThroughProgram);
     glEnable(GL_FRAGMENT_PROGRAM_ARB);
-  }		
+  }
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::endCapture(bool bDisablePassThroughShader) {
 
   glViewport(_viewport[0], _viewport[1], _viewport[2], _viewport[3]);
@@ -794,14 +794,14 @@ FramebufferObject::endCapture(bool bDisablePassThroughShader) {
   if(_bInitialized)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  if(_bFloatColorBuffer && bDisablePassThroughShader) 
+  if(_bFloatColorBuffer && bDisablePassThroughShader)
     glDisable(GL_FRAGMENT_PROGRAM_ARB);
 
 }
 
 // -----------------------------------------------------------------------------
 
-void						
+void
 FramebufferObject::parseModeString(const char *modeString) {
 
   if (!modeString || strcmp(modeString, "") == 0)
@@ -870,7 +870,7 @@ FramebufferObject::parseModeString(const char *modeString) {
         _colorAttachmentDepth = RGBA_32;
 
         _internalColorFormat	= GL_RGBA32F_ARB;
-        _colorType				= GL_FLOAT;	
+        _colorType				= GL_FLOAT;
 
         // linear filter is not supported for 32 FBOs
         _minFilter				= GL_NEAREST;
@@ -879,40 +879,40 @@ FramebufferObject::parseModeString(const char *modeString) {
         _bFloatColorBuffer		= true;
       }
 
-      //---------------------------------------------	
+      //---------------------------------------------
       //	check for multiple render targets!
 
       if( kv.second.find("10x") != kv.second.npos ) {
-        _numColorAttachments = 10;				
+        _numColorAttachments = 10;
       } else if( kv.second.find("11x") != kv.second.npos ) {
-        _numColorAttachments = 11;				
+        _numColorAttachments = 11;
       } else if( kv.second.find("12x") != kv.second.npos ) {
-        _numColorAttachments = 12;				
+        _numColorAttachments = 12;
       } else if( kv.second.find("13x") != kv.second.npos ) {
-        _numColorAttachments = 13;				
+        _numColorAttachments = 13;
       } else if( kv.second.find("14x") != kv.second.npos ) {
-        _numColorAttachments = 14;				
+        _numColorAttachments = 14;
       } else if( kv.second.find("15x") != kv.second.npos ) {
-        _numColorAttachments = 15;				
+        _numColorAttachments = 15;
       } else if( kv.second.find("16x") != kv.second.npos ) {
-        _numColorAttachments = 16;				
+        _numColorAttachments = 16;
       } else if( kv.second.find("2x") != kv.second.npos ) {
-        _numColorAttachments = 2;				
+        _numColorAttachments = 2;
       } else if( kv.second.find("3x") != kv.second.npos ) {
-        _numColorAttachments = 3;				
+        _numColorAttachments = 3;
       } else if( kv.second.find("4x") != kv.second.npos ) {
-        _numColorAttachments = 4;				
+        _numColorAttachments = 4;
       } else if( kv.second.find("5x") != kv.second.npos ) {
-        _numColorAttachments = 5;				
+        _numColorAttachments = 5;
       } else if( kv.second.find("6x") != kv.second.npos ) {
-        _numColorAttachments = 6;				
+        _numColorAttachments = 6;
       } else if( kv.second.find("7x") != kv.second.npos ) {
-        _numColorAttachments = 7;				
+        _numColorAttachments = 7;
       } else if( kv.second.find("8x") != kv.second.npos ) {
-        _numColorAttachments = 8;				
+        _numColorAttachments = 8;
       } else if( kv.second.find("9x") != kv.second.npos ) {
-        _numColorAttachments = 9;				
-      }  
+        _numColorAttachments = 9;
+      }
 
       //---------------------------------------------
 
@@ -957,40 +957,40 @@ FramebufferObject::parseModeString(const char *modeString) {
         _bFloatColorBuffer		= true;
       }
 
-      //---------------------------------------------	
+      //---------------------------------------------
       //	check for multiple render targets!
 
       if( kv.second.find("10x") != kv.second.npos ) {
-        _numColorAttachments = 10;				
+        _numColorAttachments = 10;
       } else if( kv.second.find("11x") != kv.second.npos ) {
-        _numColorAttachments = 11;				
+        _numColorAttachments = 11;
       } else if( kv.second.find("12x") != kv.second.npos ) {
-        _numColorAttachments = 12;				
+        _numColorAttachments = 12;
       } else if( kv.second.find("13x") != kv.second.npos ) {
-        _numColorAttachments = 13;				
+        _numColorAttachments = 13;
       } else if( kv.second.find("14x") != kv.second.npos ) {
-        _numColorAttachments = 14;				
+        _numColorAttachments = 14;
       } else if( kv.second.find("15x") != kv.second.npos ) {
-        _numColorAttachments = 15;				
+        _numColorAttachments = 15;
       } else if( kv.second.find("16x") != kv.second.npos ) {
-        _numColorAttachments = 16;				
+        _numColorAttachments = 16;
       } else if( kv.second.find("2x") != kv.second.npos ) {
-        _numColorAttachments = 2;				
+        _numColorAttachments = 2;
       } else if( kv.second.find("3x") != kv.second.npos ) {
-        _numColorAttachments = 3;				
+        _numColorAttachments = 3;
       } else if( kv.second.find("4x") != kv.second.npos ) {
-        _numColorAttachments = 4;				
+        _numColorAttachments = 4;
       } else if( kv.second.find("5x") != kv.second.npos ) {
-        _numColorAttachments = 5;				
+        _numColorAttachments = 5;
       } else if( kv.second.find("6x") != kv.second.npos ) {
-        _numColorAttachments = 6;				
+        _numColorAttachments = 6;
       } else if( kv.second.find("7x") != kv.second.npos ) {
-        _numColorAttachments = 7;				
+        _numColorAttachments = 7;
       } else if( kv.second.find("8x") != kv.second.npos ) {
-        _numColorAttachments = 8;				
+        _numColorAttachments = 8;
       } else if( kv.second.find("9x") != kv.second.npos ) {
-        _numColorAttachments = 9;				
-      }  
+        _numColorAttachments = 9;
+      }
 
       //---------------------------------------------
 
@@ -1014,11 +1014,11 @@ FramebufferObject::parseModeString(const char *modeString) {
         _bDepthAttachmentRenderTexture = false;
       }
 
-      if( kv.second.find("16") != kv.second.npos ) 
+      if( kv.second.find("16") != kv.second.npos )
         _internalDepthFormat	= GL_DEPTH_COMPONENT16;
-      if( kv.second.find("24") != kv.second.npos ) 
-        _internalDepthFormat	= GL_DEPTH_COMPONENT24;				 
-      if( kv.second.find("32") != kv.second.npos ) 
+      if( kv.second.find("24") != kv.second.npos )
+        _internalDepthFormat	= GL_DEPTH_COMPONENT24;
+      if( kv.second.find("32") != kv.second.npos )
         _internalDepthFormat	= GL_DEPTH_COMPONENT32;
     }
 
@@ -1048,7 +1048,7 @@ FramebufferObject::parseModeString(const char *modeString) {
               } else if( kv.second.find("1") != kv.second.npos ) {
               _stencilDepth	= 1;
               _internalStencilFormat = GL_STENCIL_INDEX1;
-              }	*/		
+              }	*/
     }
 
   }
@@ -1056,7 +1056,7 @@ FramebufferObject::parseModeString(const char *modeString) {
 
 // -----------------------------------------------------------------------------
 
-FramebufferObject::KeyVal 
+FramebufferObject::KeyVal
 FramebufferObject::getKeyValuePair(string token) {
 
   string::size_type pos = 0;
@@ -1072,7 +1072,7 @@ FramebufferObject::getKeyValuePair(string token) {
 
 // -----------------------------------------------------------------------------
 
-bool 
+bool
 FramebufferObject::checkFramebufferStatus(void) {
 
   _framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -1098,43 +1098,43 @@ FramebufferObject::printFramebufferStatus(void) {
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_UNSUPPORTED" << endl;
       break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: 
+    case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT" << endl;
-      break; 
+      break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: 
+    case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT" << endl;
-      break; 
+      break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT: 
+    case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS_EXT" << endl;
-      break; 
+      break;
 
-      //		case GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT: 
+      //		case GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT:
       //			cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_DUPLICATE_ATTACHMENT" << endl;
-      //			break; 
+      //			break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT: 
+    case GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_FORMATS_EXT" << endl;
-      break; 
+      break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: 
+    case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER" << endl;
-      break; 
+      break;
 
-    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: 
+    case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER" << endl;
-      break; 
+      break;
 
-    case GL_FRAMEBUFFER_BINDING: 
+    case GL_FRAMEBUFFER_BINDING:
       cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_BINDING" << endl;
-      break; 
+      break;
 
-      //		case GL_FRAMEBUFFER_STATUS_ERROR: 
+      //		case GL_FRAMEBUFFER_STATUS_ERROR:
       //			cout << "FramebufferObject ERROR: GL_FRAMEBUFFER_STATUS_ERROR" << endl;
-      //			break; 
+      //			break;
 
-    default: 
+    default:
       cout << "FramebufferObject ERROR: unidentified error!" << endl;
       break;
   }

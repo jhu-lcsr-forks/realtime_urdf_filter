@@ -46,8 +46,10 @@ namespace occupancy_map_monitor
 {
 
 RealtimeURDFFilterOctomapUpdater::RealtimeURDFFilterOctomapUpdater() :
-  OccupancyMapUpdater("DepthImageUpdater"),
+  OccupancyMapUpdater("RealtimeURDFFilterUpdater"),
   nh_("~"),
+  argc_(1),
+  argv_(new char*[argc_]),
   input_depth_transport_(nh_),
   model_depth_transport_(nh_),
   filtered_depth_transport_(nh_),
@@ -67,32 +69,30 @@ RealtimeURDFFilterOctomapUpdater::RealtimeURDFFilterOctomapUpdater() :
   failed_tf_(0),
   K0_(0.0), K2_(0.0), K4_(0.0), K5_(0.0)
 {
+  argv_[1] = "RealtimeURDFFilterUpdater";
+  argv_[0] = "";
+
+  filter_.reset(new realtime_urdf_filter::RealtimeURDFFilter(nh_, argc_, argv_));
 }
 
 RealtimeURDFFilterOctomapUpdater::~RealtimeURDFFilterOctomapUpdater()
 {
-  stopHelper();
+  filter_->stop();
+
+  if(argv_) {
+    for(unsigned int i=0; i<argc_; i++) {
+      delete argv_[i];
+    }
+    delete[] argv_;
+    argc_ = 0;
+  }
 }
 
 bool RealtimeURDFFilterOctomapUpdater::setParams(XmlRpc::XmlRpcValue &params)
 {
   try
   {
-    sensor_type_ = (std::string) params["sensor_type"];
-    if (params.hasMember("image_topic"))
-      image_topic_ = (std::string) params["image_topic"];
-    if (params.hasMember("queue_size"))
-      queue_size_ = (int)params["queue_size"];
-
-    readXmlParam(params, "near_clipping_plane_distance", &near_clipping_plane_distance_);
-    readXmlParam(params, "far_clipping_plane_distance", &far_clipping_plane_distance_);
-    readXmlParam(params, "shadow_threshold", &shadow_threshold_);
-    readXmlParam(params, "padding_scale", &padding_scale_);
-    readXmlParam(params, "padding_offset", &padding_offset_);
-    readXmlParam(params, "skip_vertical_pixels", &skip_vertical_pixels_);
-    readXmlParam(params, "skip_horizontal_pixels", &skip_horizontal_pixels_);
-    if (params.hasMember("filtered_cloud_topic"))
-      filtered_cloud_topic_ = static_cast<const std::string&>(params["filtered_cloud_topic"]);
+    filter_->setParams(params);
   }
   catch (XmlRpc::XmlRpcException &ex)
   {
@@ -108,101 +108,38 @@ bool RealtimeURDFFilterOctomapUpdater::initialize()
   tf_ = monitor_->getTFClient();
   free_space_updater_.reset(new LazyFreeSpaceUpdater(tree_));
 
-  // create our mesh filter
-  mesh_filter_.reset(new mesh_filter::MeshFilter<mesh_filter::StereoCameraModel>(mesh_filter::MeshFilterBase::TransformCallback(),
-                                                                                 mesh_filter::StereoCameraModel::RegisteredPSDKParams));
-  mesh_filter_->parameters().setDepthRange(near_clipping_plane_distance_, far_clipping_plane_distance_);
-  mesh_filter_->setShadowThreshold(shadow_threshold_);
-  mesh_filter_->setPaddingOffset(padding_offset_);
-  mesh_filter_->setPaddingScale(padding_scale_);
-  mesh_filter_->setTransformCallback(boost::bind(&RealtimeURDFFilterOctomapUpdater::getShapeTransform, this, _1, _2));
-
   return true;
 }
 
 void RealtimeURDFFilterOctomapUpdater::start()
 {
-  image_transport::TransportHints hints("raw", ros::TransportHints(), nh_);
-  pub_model_depth_image_ = model_depth_transport_.advertiseCamera("model_depth", 1);
-
-  if(!filtered_cloud_topic_.empty())
-    pub_filtered_depth_image_ = filtered_depth_transport_.advertiseCamera(filtered_cloud_topic_, 1);
-  else
-    pub_filtered_depth_image_ = filtered_depth_transport_.advertiseCamera("filtered_depth", 1);
-
-  pub_filtered_label_image_ = filtered_label_transport_.advertiseCamera("filtered_label", 1);
-
-  sub_depth_image_ = input_depth_transport_.subscribeCamera(image_topic_, queue_size_, &RealtimeURDFFilterOctomapUpdater::depthImageCallback, this, hints);
+  filter_->subscribe(boost::bind(&RealtimeURDFFilterOctomapUpdater::depthImageCallback, this, _1, _2));
 }
 
 void RealtimeURDFFilterOctomapUpdater::stop()
 {
-  stopHelper();
-}
-
-void RealtimeURDFFilterOctomapUpdater::stopHelper()
-{
-  sub_depth_image_.shutdown();
 }
 
 mesh_filter::MeshHandle RealtimeURDFFilterOctomapUpdater::excludeShape(const shapes::ShapeConstPtr &shape)
 {
   mesh_filter::MeshHandle h = 0;
-  if (mesh_filter_)
-  {
-    if (shape->type == shapes::MESH)
-      h = mesh_filter_->addMesh(static_cast<const shapes::Mesh&>(*shape));
-    else
-    {
-      boost::scoped_ptr<shapes::Mesh> m(shapes::createMeshFromShape(shape.get()));
-      if (m)
-        h = mesh_filter_->addMesh(*m);
-    }
-  }
-  else
-    ROS_ERROR("Mesh filter not yet initialized!");
+
   return h;
 }
 
 void RealtimeURDFFilterOctomapUpdater::forgetShape(mesh_filter::MeshHandle handle)
 {
-  if (mesh_filter_)
-    mesh_filter_->removeMesh(handle);
 }
 
-bool RealtimeURDFFilterOctomapUpdater::getShapeTransform(mesh_filter::MeshHandle h, Eigen::Affine3d &transform) const
-{
-  ShapeTransformCache::const_iterator it = transform_cache_.find(h);
-  if (it == transform_cache_.end())
-  {
-    ROS_ERROR("Internal error. Mesh filter handle %u not found", h);
-    return false;
-  }
-  transform = it->second;
-  return true;
-}
-
-namespace
-{
-bool host_is_big_endian(void)
-{
-  union {
-      uint32_t i;
-      char c[sizeof(uint32_t)];
-  } bint = {0x01020304};
-  return bint.c[0] == 1;
-}
-}
-
-static const bool HOST_IS_BIG_ENDIAN = host_is_big_endian();
 
 void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
 {
   ROS_DEBUG("Received a new depth image message (frame = '%s', encoding='%s')", depth_msg->header.frame_id.c_str(), depth_msg->encoding.c_str());
 
+  // hold wall time for performance monitoring
   ros::WallTime start = ros::WallTime::now();
 
-  // measure the frequency at which we receive updates
+#if 1 // measure the frequency at which we receive updates
   if (image_callback_count_ < 1000)
   {
     if (image_callback_count_ > 0)
@@ -219,16 +156,18 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
     image_callback_count_ = 2;
   last_depth_callback_start_ = start;
   ++image_callback_count_;
+#endif
 
+  // use the depth frame if there's no frame to transform into
   if (monitor_->getMapFrame().empty())
     monitor_->setMapFrame(depth_msg->header.frame_id);
 
-  /* get transform for cloud into map frame */
+  // compute the transform from the sensor to the map frame
   tf::StampedTransform map_H_sensor;
-  if (monitor_->getMapFrame() == depth_msg->header.frame_id)
+  if (monitor_->getMapFrame() == depth_msg->header.frame_id) {
     map_H_sensor.setIdentity();
-  else
-  {
+  } else {
+    // get transform for cloud into map frame
     if (tf_)
     {
       // wait at most 50ms
@@ -236,7 +175,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
       const int nt = (int)(0.5 + average_callback_dt_ / TEST_DT) * std::max(1, ((int)queue_size_ / 2));
       bool found = false;
       std::string err;
-      for (int t = 0 ; t < nt ; ++t)
+      for (int t = 0 ; t < nt ; ++t) {
         try
         {
           tf_->lookupTransform(monitor_->getMapFrame(), depth_msg->header.frame_id, depth_msg->header.stamp, map_H_sensor);
@@ -249,6 +188,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
           err = ex.what();
           d.sleep();
         }
+      }
       static const unsigned int MAX_TF_COUNTER = 1000; // so we avoid int overflow
       if (found)
       {
@@ -264,8 +204,8 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
       {
         failed_tf_++;
         if (failed_tf_ > good_tf_)
-          ROS_WARN_THROTTLE(1, "More than half of the image messages discared due to TF being unavailable (%u%%). Transform error of sensor data: %s; quitting callback.",
-                            (100 * failed_tf_) / (good_tf_ + failed_tf_), err.c_str());
+          ROS_WARN_THROTTLE(1, "More than half of the image messages discared due to TF being unavailable (%u%%). Transform error of sensor data: %s; quitting callback. Map frame: %s, Depth frame: %s",
+                            (100 * failed_tf_) / (good_tf_ + failed_tf_), err.c_str(), monitor_->getMapFrame().c_str(), depth_msg->header.frame_id.c_str());
         else
           ROS_DEBUG_THROTTLE(1, "Transform error of sensor data: %s; quitting callback", err.c_str());
         if (failed_tf_ > MAX_TF_COUNTER)
@@ -287,18 +227,22 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
     return;
   }
 
+# if 0 // check endianness
   if (depth_msg->is_bigendian && !HOST_IS_BIG_ENDIAN)
     ROS_ERROR_THROTTLE(1, "endian problem: received image data does not match host");
+#endif
 
   const int w = depth_msg->width;
   const int h = depth_msg->height;
 
-  // call the mesh filter
+#if 0 // call the mesh filter (old)
   mesh_filter::StereoCameraModel::Parameters& params = mesh_filter_->parameters();
   params.setCameraParameters (info_msg->K[0], info_msg->K[4], info_msg->K[2], info_msg->K[5]);
   params.setImageSize(w, h);
+#endif
 
   const bool is_u_short = depth_msg->encoding == sensor_msgs::image_encodings::TYPE_16UC1;
+#if 0 // call the mesh filter (old)
   if (is_u_short)
     mesh_filter_->filter(&depth_msg->data[0], GL_UNSIGNED_SHORT);
   else
@@ -312,6 +256,10 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
   }
 
   // the mesh filter runs in background; compute extra things in the meantime
+#endif
+
+  // filter the depth image
+  filter_->filter_callback(depth_msg, info_msg);
 
   // Use correct principal point from calibration
   const double px = info_msg->K[2];
@@ -357,11 +305,21 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
   if (filtered_labels_.size() < img_size)
     filtered_labels_.resize(img_size);
 
+#if 0
+  // get filtered labels
+
   // get the labels of the filtered data
   const unsigned int* labels_row = &filtered_labels_ [0];
   mesh_filter_->getFilteredLabels(&filtered_labels_ [0]);
+#else
+  // get filtered labels
+  filter_->getLables(filtered_labels_);
 
-  // publish debug information if needed
+  // get the labels of the filtered data
+  const unsigned int* labels_row = &filtered_labels_ [0];
+#endif
+
+#if 0 // publish debug information if needed
   if (debug_info_)
   {
     sensor_msgs::Image debug_msg;
@@ -399,7 +357,9 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
 
     pub_filtered_label_image_.publish(label_msg, *info_msg);
   }
+#endif
 
+#if 0 // publish filtered cloud ( cloud without robot )
   if(!filtered_cloud_topic_.empty())
   {
     static std::vector<float> filtered_data;
@@ -421,6 +381,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
     }
     pub_filtered_depth_image_.publish(filtered_msg, *info_msg);
   }
+#endif
 
   // figure out occupied cells and model cells
   tree_->lockRead();
@@ -429,6 +390,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
   {
     const int h_bound = h - skip_vertical_pixels_;
     const int w_bound = w - skip_horizontal_pixels_;
+    const double scale = (is_u_short) ? (1e-3) : (1.0);
 
     if (is_u_short)
     {
@@ -440,7 +402,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
           // not filtered
           if (labels_row [x] == mesh_filter::MeshFilterBase::Background)
           {
-            float zz = (float)input_row[x] * 1e-3; // scale from mm to m
+            float zz = (float)input_row[x] * scale; // scale from mm to m
             float yy = y_cache_[y] * zz;
             float xx = x_cache_[x] * zz;
             /* transform to map frame */
@@ -450,7 +412,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
           // on far plane or a model point -> remove
           else if (labels_row [x] >= mesh_filter::MeshFilterBase::FarClip)
           {
-            float zz = input_row[x] * 1e-3;
+            float zz = input_row[x] * scale;
             float yy = y_cache_[y] * zz;
             float xx = x_cache_[x] * zz;
             /* transform to map frame */
@@ -469,7 +431,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
         {
           if (labels_row [x] == mesh_filter::MeshFilterBase::Background)
           {
-            float zz = input_row[x];
+            float zz = input_row[x] * scale;
             float yy = y_cache_[y] * zz;
             float xx = x_cache_[x] * zz;
             /* transform to map frame */
@@ -478,7 +440,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
           }
           else if (labels_row [x] >= mesh_filter::MeshFilterBase::FarClip)
           {
-            float zz = input_row[x];
+            float zz = input_row[x] * scale;
             float yy = y_cache_[y] * zz;
             float xx = x_cache_[x] * zz;
             /* transform to map frame */

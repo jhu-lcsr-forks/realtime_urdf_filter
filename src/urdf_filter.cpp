@@ -46,6 +46,7 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   , fbo_initialized_(false)
   , depth_image_pbo_ (GL_INVALID_VALUE)
   , depth_texture_(GL_INVALID_VALUE)
+  , image_topic_("input_depth")
   , width_(0)
   , height_(0)
   , camera_tx_(0)
@@ -54,22 +55,53 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   , near_plane_ (0.1)
   , argc_ (argc), argv_(argv)
 {
-  // get fixed frame name
+
+}
+
+void RealtimeURDFFilter::start ()
+{
+  XmlRpc::XmlRpcValue params;
+  nh_.getParam("/", params);
+  this->setParams(params);
+
+  this->advertise();
+  this->subscribe();
+}
+
+void RealtimeURDFFilter::stop ()
+{
+  depth_sub_.shutdown();
+}
+
+void RealtimeURDFFilter::setParams (XmlRpc::XmlRpcValue &params)
+{
   XmlRpc::XmlRpcValue v;
-  nh_.getParam ("fixed_frame", v);
+
+  // get fixed frame name
+  ROS_ASSERT (params.hasMember("fixed_frame"));
+  v = params["fixed_frame"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "fixed_frame paramter!");
   fixed_frame_ = (std::string)v;
   ROS_INFO ("using fixed frame %s", fixed_frame_.c_str ());
 
+  if(params.hasMember("image_topic")) {
+    v = params["image_topic"];
+    ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "image_topic paramter!");
+    image_topic_ = (std::string)v;
+    ROS_INFO ("using image topic %s", image_topic_.c_str ());
+  }
+
   // get camera frame name
   // we do not read this from ROS message, for being able to run this within openni (self filtered tracker..)
-  nh_.getParam ("camera_frame", v);
+  ROS_ASSERT (params.hasMember("camera_frame"));
+  v = params["camera_frame"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "need a camera_frame paramter!");
   cam_frame_ = (std::string)v;
   ROS_INFO ("using camera frame %s", cam_frame_.c_str ());
 
   // read additional camera offset (TODO: make optional)
-  nh_.getParam ("camera_offset", v);
+  ROS_ASSERT (params.hasMember("camera_offset"));
+  v = params["camera_offset"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeStruct && "need a camera_offset paramter!");
   ROS_ASSERT (v.hasMember ("translation") && v.hasMember ("rotation") && "camera offset needs a translation and rotation parameter!");
 
@@ -90,29 +122,74 @@ RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **ar
   camera_offset_q_ = tf::Quaternion((double)vec[0], (double)vec[1], (double)vec[2], (double)vec[3]);
 
   // depth distance threshold (how far from the model are points still deleted?)
-  nh_.getParam ("depth_distance_threshold", v);
+  ROS_ASSERT (params.hasMember("depth_distance_threshold"));
+  v = params["depth_distance_threshold"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeDouble && "need a depth_distance_threshold paramter!");
   depth_distance_threshold_ = (double)v;
   ROS_INFO ("using depth distance threshold %f", depth_distance_threshold_);
 
   // depth distance threshold (how far from the model are points still deleted?)
-  nh_.getParam ("show_gui", v);
+  ROS_ASSERT (params.hasMember("show_gui"));
+  v = params["show_gui"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeBoolean && "need a show_gui paramter!");
   show_gui_ = (bool)v;
   ROS_INFO ("showing gui / visualization: %s", (show_gui_?"ON":"OFF"));
 
   // fitler replace value
-  nh_.getParam ("filter_replace_value", v);
+  ROS_ASSERT (params.hasMember("filter_replace_value"));
+  v = params["filter_replace_value"];
   ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeDouble && "need a filter_replace_value paramter!");
   filter_replace_value_ = (double)v;
   ROS_INFO ("using filter replace value %f", filter_replace_value_);
 
-  // setup publishers
-  depth_sub_ = image_transport_.subscribeCamera("input_depth", 10,
+  // read models
+  ROS_ASSERT (params.hasMember("models"));
+  v = params["models"];
+  ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeArray && "models param must be an array!");
+  models_ = v;
+
+  // determine if visual or collision geometry should be used
+  ROS_ASSERT (params.hasMember("geometry_type"));
+  v = params["geometry_type"];
+  ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "need a geometry_type paramter!");
+  geometry_type_ = ((std::string)v == "collision" ? URDFRenderer::COLLISION : URDFRenderer::VISUAL);
+
+  ROS_ASSERT (params.hasMember("inflation"));
+  v = params["inflation"];
+  ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeDouble && "need an inflation paramter!");
+  inflation_ = (double)v;
+}
+
+void RealtimeURDFFilter::subscribe()
+{
+  // setup subscribers
+  depth_sub_ = image_transport_.subscribeCamera(
+      image_topic_, 10,
       &RealtimeURDFFilter::filter_callback, this);
+}
+
+void RealtimeURDFFilter::subscribe( CallbackType callback)
+{
+  // setup subscribers
+  this->subscribe(image_topic_, 10, callback);
+}
+
+void RealtimeURDFFilter::subscribe(
+    const std::string image_topic,
+    const size_t queue,
+    CallbackType callback)
+{
+  // setup subscribers
+  depth_sub_ = image_transport_.subscribeCamera(
+      image_topic, queue, callback);
+}
+
+void RealtimeURDFFilter::advertise ()
+{
+  // setup publishers
+  mask_pub_ = image_transport_.advertiseCamera("output_mask", 10);
   depth_pub_ = image_transport_.advertiseCamera("output_depth", 10);
   depth_pub_raw_ = image_transport_.advertiseCamera("output_depth_raw", 10);
-  mask_pub_ = image_transport_.advertiseCamera("output_mask", 10);
 }
 
 RealtimeURDFFilter::~RealtimeURDFFilter ()
@@ -124,63 +201,45 @@ RealtimeURDFFilter::~RealtimeURDFFilter ()
 // loads URDF models
 void RealtimeURDFFilter::loadModels ()
 {
-  XmlRpc::XmlRpcValue v;
-  nh_.getParam ("models", v);
-
-  if (v.getType () == XmlRpc::XmlRpcValue::TypeArray)
+  for (int i = 0; i < models_.size(); ++i)
   {
-    for (int i = 0; i < v.size(); ++i)
+    XmlRpc::XmlRpcValue elem = models_[i];
+    ROS_ASSERT (elem.getType()  == XmlRpc::XmlRpcValue::TypeStruct);
+
+    std::string description_param = elem["model"];
+    std::string tf_prefix = elem["tf_prefix"];
+
+    // read URDF model
+    std::string content;
+
+    if (!nh_.getParam(description_param, content))
     {
-      XmlRpc::XmlRpcValue elem = v[i];
-      ROS_ASSERT (elem.getType()  == XmlRpc::XmlRpcValue::TypeStruct);
-
-      std::string description_param = elem["model"];
-      std::string tf_prefix = elem["tf_prefix"];
-
-      // read URDF model
-      std::string content;
-
-      if (!nh_.getParam(description_param, content))
+      std::string loc;
+      if (nh_.searchParam(description_param, loc))
       {
-        std::string loc;
-        if (nh_.searchParam(description_param, loc))
-        {
-          nh_.getParam(loc, content);
-        }
-        else
-        {
-          ROS_ERROR ("Parameter [%s] does not exist, and was not found by searchParam()",
-              description_param.c_str());
-          continue;
-        }
+        nh_.getParam(loc, content);
       }
-
-      if (content.empty())
+      else
       {
-        ROS_ERROR ("URDF is empty");
+        ROS_ERROR ("Parameter [%s] does not exist, and was not found by searchParam()",
+                   description_param.c_str());
         continue;
       }
-
-      // determine if visual or collision geometry should be used
-      std::string geometry_type;
-      nh_.getParam("geometry_type", geometry_type);
-
-      // get inflation parameter
-      double inflation = 0.0;
-      nh_.param("inflation", inflation, 0.0);
-
-      // finally, set the model description so we can later parse it.
-      ROS_INFO ("Loading URDF model: %s", description_param.c_str ());
-      renderers_.push_back (
-          new URDFRenderer (
-              content, tf_prefix, cam_frame_, fixed_frame_, tf_,
-              (geometry_type == "collision" ? URDFRenderer::COLLISION : URDFRenderer::VISUAL),
-              inflation));
     }
-  }
-  else
-  {
-    ROS_ERROR ("models parameter must be an array!");
+
+    if (content.empty())
+    {
+      ROS_ERROR ("URDF is empty");
+      continue;
+    }
+
+    // finally, set the model description so we can later parse it.
+    ROS_INFO ("Loading URDF model: %s", description_param.c_str ());
+    renderers_.push_back (
+        new URDFRenderer (
+            content, tf_prefix, cam_frame_, fixed_frame_, tf_,
+            geometry_type_,
+            inflation_));
   }
 }
 
@@ -261,6 +320,8 @@ void RealtimeURDFFilter::filter_callback
 {
   //ROS_DEBUG_STREAM("Received image with camera info: "<<*camera_info);
 
+  unsigned char *buffer = NULL;
+
   // convert to OpenCV cv::Mat
   cv_bridge::CvImageConstPtr orig_depth_img;
   try {
@@ -269,8 +330,6 @@ void RealtimeURDFFilter::filter_callback
     ROS_ERROR("cv_bridge Exception: %s", e.what());
     return;
   }
-
-  unsigned char *buffer = NULL;
 
   double depth_factor = 1.0;
 
@@ -315,6 +374,12 @@ void RealtimeURDFFilter::filter_callback
     out_mask.image = mask_image;
     mask_pub_.publish (out_mask.toImageMsg (), camera_info);
   }
+}
+
+void RealtimeURDFFilter::getLables(
+    std::vector<unsigned int> &lables)
+{
+  lables.assign(labeled_depth_, labeled_depth_+(width_*height_));
 }
 
 void RealtimeURDFFilter::textureBufferFromDepthBuffer(unsigned char* buffer, int size_in_bytes)
@@ -419,6 +484,8 @@ void RealtimeURDFFilter::initGL ()
 
   // Alocate buffer for the masked depth image (float)
   masked_depth_ = (GLfloat*) malloc(width_ * height_ * sizeof(GLfloat));
+  // Allocate buffer for labels
+  labeled_depth_ = (GLint*) malloc(width_ * height_ * sizeof(GLfloat));
   // Alocate buffer for the mask (uchar)
   mask_ = (GLubyte*) malloc(width_ * height_ * sizeof(GLubyte));
 }
@@ -427,7 +494,7 @@ void RealtimeURDFFilter::initGL ()
 void RealtimeURDFFilter::initFrameBufferObject ()
 {
 
-  fbo_ = new FramebufferObject("rgba=4x32t depth=24t stencil=8t");
+  fbo_ = new FramebufferObject("rgba=5x32t depth=24t stencil=8t");
   fbo_->initialize(width_, height_);
 
   fbo_initialized_ = true;
@@ -497,7 +564,8 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
     GL_COLOR_ATTACHMENT0,
     GL_COLOR_ATTACHMENT1,
     GL_COLOR_ATTACHMENT2,
-    GL_COLOR_ATTACHMENT3
+    GL_COLOR_ATTACHMENT3,
+    GL_COLOR_ATTACHMENT4
   };
 
   GLenum err;
@@ -771,6 +839,19 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
           glVertex2f(0.333, 0.5);
         glEnd();
 
+        // draw color buffer 4 (labels)
+        fbo_->bind(4);
+        glBegin(GL_QUADS);
+          glTexCoord2f(0.0, fbo_->getHeight());
+          glVertex2f(0.666, 0.0);
+          glTexCoord2f(fbo_->getWidth(), fbo_->getHeight());
+          glVertex2f(1.0, 0.0);
+          glTexCoord2f(fbo_->getWidth(), 0.0);
+          glVertex2f(1.0, 0.5);
+          glTexCoord2f(0.0, 0.0);
+          glVertex2f(0.666, 0.5);
+        glEnd();
+
         // draw depth buffer
         fbo_->bindDepth();
         glBegin(GL_QUADS);
@@ -796,6 +877,9 @@ void RealtimeURDFFilter::render (const double* camera_projection_matrix)
     fbo_->bind(3);
     glGetTexImage (fbo_->getTextureTarget(), 0, GL_RED, GL_UNSIGNED_BYTE, mask_);
   }
+
+  fbo_->bind(4);
+  glGetTexImage (fbo_->getTextureTarget(), 0, GL_RED, GL_INT, labeled_depth_);
 
   // Ok, finished with all OpenGL, let's swap!
   if (show_gui_) {

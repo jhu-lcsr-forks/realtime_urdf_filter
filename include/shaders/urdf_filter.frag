@@ -39,7 +39,12 @@ void main(void)
                          1.0);
 
   // fourth color attachment: mask image
-  gl_FragData[3] = vec4(should_filter, 0.0, 0.0, 0.0);
+  gl_FragData[3] = vec4(should_filter, 0.0, 0.0, 1.0);
+
+  // fourth color attachment: label image
+  gl_FragData[4] = mix(vec4(0.0, 1.0, 0.0, 1.0),
+                       vec4(16.0, 0.0, 0.0, 1.0),
+                       should_filter);
 }
 
 		

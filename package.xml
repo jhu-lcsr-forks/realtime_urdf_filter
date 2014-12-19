@@ -29,13 +29,14 @@
   <run_depend>nodelet</run_depend>
   <run_depend>image_transport</run_depend>
   <run_depend>urdf_model</run_depend>
+  <run_depend>moveit_ros_perception</run_depend>
 
-  <build_depend>libglew1.6"</build_depend>
-  <build_depend>libglew1.6-dev"</build_depend>
+  <build_depend>libglew1.6</build_depend>
+  <build_depend>libglew1.6-dev</build_depend>
 
   <export>
-    <nodelet plugin="${prefix}/plugins/nodelet_plugins.xml" />
-    <moveit_ros_perception plugin="${prefix}/moveit_ros_perception_plugins.xml"/>
+    <nodelet plugin="${prefix}/plugins/nodelet_plugins.xml"/>
+    <moveit_ros_perception plugin="${prefix}/plugins/moveit_ros_perception_plugins.xml" />
   </export>
 
 </package>

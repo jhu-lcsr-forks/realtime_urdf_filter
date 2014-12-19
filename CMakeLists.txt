@@ -85,7 +85,7 @@ if(moveit_ros_perception_FOUND)
     src/moveit_octomap_updater.cpp
     )
 
-  target_link_libraries(${MOVEIT_LIB_NAME}_core ${moveit_ros_perception_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+  target_link_libraries(${MOVEIT_LIB_NAME}_core urdf_filter ${moveit_ros_perception_LIBRARIES} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 
   add_library(${MOVEIT_LIB_NAME} src/moveit_octomap_updater_plugin.cpp)
   target_link_libraries(${MOVEIT_LIB_NAME} ${MOVEIT_LIB_NAME}_core ${catkin_LIBRARIES} ${Boost_LIBRARIES})
