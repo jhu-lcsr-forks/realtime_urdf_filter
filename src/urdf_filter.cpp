@@ -34,6 +34,8 @@
 #include <image_transport/image_transport.h>
 #include <sensor_msgs/image_encodings.h>
 #include <algorithm>
+#include <image_transport/camera_common.h>
+
 
 //#define USE_OWN_CALIBRATION
 
@@ -42,11 +44,14 @@ using namespace realtime_urdf_filter;
 // constructor. sets up ros and reads in parameters
 RealtimeURDFFilter::RealtimeURDFFilter (ros::NodeHandle &nh, int argc, char **argv)
   : nh_(nh)
-  , image_transport_(nh)
+  , image_transport_(nh_)
   , fbo_initialized_(false)
   , depth_image_pbo_ (GL_INVALID_VALUE)
   , depth_texture_(GL_INVALID_VALUE)
-  , image_topic_("input_depth")
+  , depth_input_image_topic_("input_depth")
+  , depth_input_camera_info_topic_("camera_info")
+  , depth_filtered_topic_("output_depth")
+  , depth_mask_topic_("output_mask")
   , width_(0)
   , height_(0)
   , camera_tx_(0)
@@ -64,6 +69,13 @@ void RealtimeURDFFilter::start ()
   nh_.getParam("/", params);
   this->setParams(params);
 
+  std::string orig_camera_info_topic = image_transport::getCameraInfoTopic(depth_input_image_topic_);
+
+  std::map<std::string, std::string> it_remappings;
+  it_remappings[orig_camera_info_topic] = depth_input_camera_info_topic_;
+  ros::NodeHandle it_nh(nh_, nh_.getNamespace(), it_remappings);
+  image_transport_ = image_transport::ImageTransport(it_nh);
+
   this->advertise();
   this->subscribe();
 }
@@ -71,6 +83,20 @@ void RealtimeURDFFilter::start ()
 void RealtimeURDFFilter::stop ()
 {
   depth_sub_.shutdown();
+}
+
+static std::string getXmlParam(XmlRpc::XmlRpcValue &params, std::string name)
+{
+  XmlRpc::XmlRpcValue v;
+
+  if(params.hasMember(name)) {
+    v = params[name];
+    ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "paramter!");
+    ROS_INFO_STREAM ("using "<<name<<" "<< ((std::string)v));
+    return (std::string)v;
+  }
+
+  return "";
 }
 
 void RealtimeURDFFilter::setParams (XmlRpc::XmlRpcValue &params)
@@ -84,12 +110,16 @@ void RealtimeURDFFilter::setParams (XmlRpc::XmlRpcValue &params)
   fixed_frame_ = (std::string)v;
   ROS_INFO ("using fixed frame %s", fixed_frame_.c_str ());
 
-  if(params.hasMember("image_topic")) {
-    v = params["image_topic"];
-    ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "image_topic paramter!");
-    image_topic_ = (std::string)v;
-    ROS_INFO ("using image topic %s", image_topic_.c_str ());
+  if(params.hasMember("depth_input_image_topic")) {
+    v = params["depth_input_image_topic"];
+    ROS_ASSERT (v.getType() == XmlRpc::XmlRpcValue::TypeString && "depth_input_image_topic paramter!");
+    depth_input_image_topic_ = (std::string)v;
+    ROS_INFO ("using image topic %s", depth_input_image_topic_.c_str ());
   }
+
+  depth_input_camera_info_topic_ = getXmlParam(params, "depth_input_camera_info_topic");
+  depth_filtered_topic_ = getXmlParam(params, "depth_filtered_topic");
+  depth_mask_topic_ = getXmlParam(params, "depth_mask_topic");
 
   // get camera frame name
   // we do not read this from ROS message, for being able to run this within openni (self filtered tracker..)
@@ -164,14 +194,14 @@ void RealtimeURDFFilter::subscribe()
 {
   // setup subscribers
   depth_sub_ = image_transport_.subscribeCamera(
-      image_topic_, 10,
+      depth_input_image_topic_, 10,
       &RealtimeURDFFilter::filter_callback, this);
 }
 
 void RealtimeURDFFilter::subscribe( CallbackType callback)
 {
   // setup subscribers
-  this->subscribe(image_topic_, 10, callback);
+  this->subscribe(depth_input_image_topic_, 10, callback);
 }
 
 void RealtimeURDFFilter::subscribe(
@@ -187,8 +217,8 @@ void RealtimeURDFFilter::subscribe(
 void RealtimeURDFFilter::advertise ()
 {
   // setup publishers
-  mask_pub_ = image_transport_.advertiseCamera("output_mask", 10);
-  depth_pub_ = image_transport_.advertiseCamera("output_depth", 10);
+  mask_pub_ = image_transport_.advertiseCamera(depth_mask_topic_, 10);
+  depth_pub_ = image_transport_.advertiseCamera(depth_filtered_topic_, 10);
   depth_pub_raw_ = image_transport_.advertiseCamera("output_depth_raw", 10);
 }
 

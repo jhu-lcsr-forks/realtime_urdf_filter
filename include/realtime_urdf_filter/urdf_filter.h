@@ -143,7 +143,10 @@ class RealtimeURDFFilter
     tf::Quaternion camera_offset_q_;
     std::string cam_frame_;
     std::string fixed_frame_;
-    std::string image_topic_;
+    std::string depth_input_image_topic_;
+    std::string depth_input_camera_info_topic_;
+    std::string depth_filtered_topic_;
+    std::string depth_mask_topic_;
     bool show_gui_;
     XmlRpc::XmlRpcValue models_;
     URDFRenderer::GeometryType geometry_type_;
