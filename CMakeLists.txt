@@ -12,7 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   nodelet
   image_transport
-  urdfdom_headers)
+  urdfdom_headers
+  moveit_ros_perception
+  )
 
 catkin_package(
   INCLUDE_DIRS include)
