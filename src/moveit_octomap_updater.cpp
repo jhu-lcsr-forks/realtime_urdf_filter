@@ -467,6 +467,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
     occupied_cells.erase(*it);
 
   // mark occupied cells
+  tree_->lockRead();
   tree_->lockWrite();
   try
   {
@@ -479,6 +480,7 @@ void RealtimeURDFFilterOctomapUpdater::depthImageCallback(const sensor_msgs::Ima
     ROS_ERROR("Internal error while updating octree");
   }
   tree_->unlockWrite();
+  tree_->unlockRead();
   tree_->triggerUpdateCallback();
 
   // at this point we still have not freed the space
