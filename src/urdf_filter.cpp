@@ -218,8 +218,8 @@ void RealtimeURDFFilter::advertise ()
 {
   // setup publishers
   mask_pub_ = image_transport_.advertiseCamera(depth_mask_topic_, 10);
-  depth_pub_ = image_transport_.advertiseCamera(depth_filtered_topic_, 10);
-  depth_pub_raw_ = image_transport_.advertiseCamera("output_depth_raw", 10);
+  depth_pub_ = image_transport_.advertise(depth_filtered_topic_, 10);
+  //depth_pub_raw_ = image_transport_.advertiseCamera("output_depth_raw", 10);
 }
 
 RealtimeURDFFilter::~RealtimeURDFFilter ()
@@ -390,7 +390,7 @@ void RealtimeURDFFilter::filter_callback
     out_masked_depth.header = ros_depth_image->header;
     out_masked_depth.encoding = "32FC1";
     out_masked_depth.image = masked_depth_image;
-    depth_pub_.publish (out_masked_depth.toImageMsg (), camera_info);
+    depth_pub_.publish (out_masked_depth.toImageMsg ());
   }
 
   if (mask_pub_.getNumSubscribers() > 0)
