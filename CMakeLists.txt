@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   nodelet
   image_transport
-  urdfdom_headers)
+)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(assimp REQUIRED assimp)
